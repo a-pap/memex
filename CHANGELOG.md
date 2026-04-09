@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-04-09 — v3.0 Karpathy wiki features
+
+### Added
+- **wiki_lint** tool — audits KB for orphan knowledge, stale facts, low confidence, stale hubs
+- **memory_stats** tool — aggregate KB statistics (facts, KG, sessions, confidence distribution)
+- **audit_trail** tool — read-only view of all write operations via audit_log D1 table
+- **KG supersession** — `kg_add` now auto-expires old triples when value changes, preserves history
+- **Confidence scoring** — facts get 0.0–1.0 confidence, reinforced on matching upsert, sorted by confidence
+- **LOG.md** — append-only activity log from update_file, store_fact, kg_add, diary_write
+- **Input sanitization** — strips prompt injection tags, enforces 50KB write limit
+- **Audit log** D1 table — tracks all write operations with timestamps
+- **Ingest Protocol** — documented workflow in MEMORY_EDITS for compiling new information across hubs
+- **Writeback Convention** — documented rule for filing synthesis back into hubs
+
+### Changed
+- MCP Worker upgraded to **v3.0**, 29 tools total
+- `store_fact` now tracks confidence and last_accessed_at
+- `query_facts` now sorts by confidence descending, touches last_accessed_at on read
+- `kg_add` detects matching subject+predicate and either reinforces or supersedes
+
+---
+
 ## 2026-04-09 — Initial MCP sync
 
 First sync from private claude-memory repo.

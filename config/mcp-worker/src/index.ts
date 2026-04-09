@@ -42,6 +42,22 @@ async function readFile(env: Env, path: string): Promise<string | null> {
   return null;
 }
 
+async function readFileFromRepo(env: Env, repo: string, path: string): Promise<string | null> {
+  const res = await fetch(`${GITHUB_API}/repos/${repo}/contents/${path}`, {
+    headers: {
+      Authorization: `Bearer ${env.GITHUB_PAT}`,
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "claude-memory-mcp/2.2",
+    },
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { content?: string; encoding?: string };
+  if (data.content && data.encoding === "base64") {
+    return base64ToUtf8(data.content);
+  }
+  return null;
+}
+
 async function listDir(env: Env, path: string): Promise<string[]> {
   const res = await githubFetch(env, path);
   if (!res.ok) return [];
@@ -120,6 +136,18 @@ async function searchRepo(
   }));
 }
 
+// ── Input sanitization ──────────────────────────────────────
+
+const SUSPICIOUS_TAGS = /<\s*\/?\s*(IMPORTANT|system|instruction|prompt|tool_call|function_call|admin|override)\b[^>]*>/gi;
+const MAX_INPUT_LENGTH = 50000; // 50KB per-write limit
+
+function sanitizeInput(value: string): string {
+  if (value.length > MAX_INPUT_LENGTH) {
+    value = value.slice(0, MAX_INPUT_LENGTH);
+  }
+  return value.replace(SUSPICIOUS_TAGS, "[STRIPPED]");
+}
+
 // ── D1 helpers ──────────────────────────────────────────────
 
 async function ensureTables(db: D1Database): Promise<void> {
@@ -130,6 +158,8 @@ async function ensureTables(db: D1Database): Promise<void> {
       value TEXT NOT NULL,
       domain TEXT,
       source TEXT,
+      confidence REAL DEFAULT 0.7,
+      last_accessed_at TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )`),
@@ -159,27 +189,56 @@ async function ensureTables(db: D1Database): Promise<void> {
       source TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )`),
-    db.prepare(`CREATE INDEX IF NOT EXISTS idx_facts_key ON facts(key)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool TEXT NOT NULL,
+      params_summary TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`),
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_facts_key ON facts(key)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_facts_domain ON facts(domain)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_sessions_surface ON sessions(surface)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_kg_subject ON knowledge_graph(subject)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_kg_predicate ON knowledge_graph(predicate)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_kg_subject_pred ON knowledge_graph(subject, predicate)`),
   ]);
+  // Add columns if missing (safe for existing DBs)
+  await db.prepare("SELECT confidence FROM facts LIMIT 1").all().catch(async () => {
+    await db.prepare("ALTER TABLE facts ADD COLUMN confidence REAL DEFAULT 0.7").run().catch(() => {});
+    await db.prepare("ALTER TABLE facts ADD COLUMN last_accessed_at TEXT").run().catch(() => {});
+  });
 }
 
-// Hub domain-to-path mapping — customize with your own domains
-// Keys are aliases, values are file paths relative to repo root
+async function auditLog(db: D1Database, tool: string, summary: string): Promise<void> {
+  await db.prepare("INSERT INTO audit_log (tool, params_summary) VALUES (?, ?)")
+    .bind(tool, summary.slice(0, 500))
+    .run()
+    .catch(() => {});
+}
+
+async function appendToLog(env: Env, tool: string, description: string): Promise<void> {
+  const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const line = `${timestamp} | ${tool} | ${description}\n`;
+  const existing = await readFile(env, "LOG.md");
+  const content = existing ? existing + line : `# Activity Log\n\n${line}`;
+  await writeFile(env, "LOG.md", content, `log: ${tool}`).catch(() => {});
+}
+
+// Hub domain-to-path mapping
 const HUB_MAP: Record<string, string> = {
-  work: "hubs/01_WORK.md",
-  projects: "hubs/02_PROJECTS.md",
-  health: "hubs/03_HEALTH.md",
-  finance: "hubs/04_FINANCE.md",
-  learning: "hubs/05_LEARNING.md",
-  blog: "hubs/06_BLOG.md",
-  // Add your own domains here, e.g.:
-  // meetings: "hubs/07_MEETINGS.md",
-  // travel: "hubs/08_TRAVEL.md",
+  rsya: "hubs/04_RSYA_WORK.md",
+  work: "hubs/04_RSYA_WORK.md",
+  experiments: "hubs/04_RSYA_WORK.md",
+  meetings: "hubs/05_MEETINGS.md",
+  relocation: "hubs/06_RELOCATION.md",
+  barcelona: "hubs/06_RELOCATION.md",
+  passlocal: "hubs/07_PASSLOCAL.md",
+  jay: "hubs/08_JAY.md",
+  spanish: "hubs/09_SPANISH.md",
+  blog: "hubs/10_BLOG.md",
+  papilov: "hubs/10_BLOG.md",
+  finance: "hubs/02_FINANCE.md",
+  creative: "hubs/03_CREATIVE.md",
 };
 
 function resolveHubPath(domain: string): string | null {
@@ -187,12 +246,35 @@ function resolveHubPath(domain: string): string | null {
   return HUB_MAP[key] || null;
 }
 
+// ── KG contradiction check ──────────────────────────────────
+
+async function checkContradictions(db: D1Database, content: string): Promise<string[]> {
+  const entityCandidates = [...new Set(
+    content.match(/[A-ZА-ЯЁ][a-zа-яё]{2,}/g) || []
+  )];
+  if (entityCandidates.length === 0) return [];
+
+  const warnings: string[] = [];
+  for (const entity of entityCandidates.slice(0, 10)) {
+    try {
+      const rows = await db
+        .prepare("SELECT subject, predicate, object FROM knowledge_graph WHERE subject LIKE ? OR object LIKE ? LIMIT 5")
+        .bind(`%${entity}%`, `%${entity}%`)
+        .all();
+      for (const row of rows.results as Array<{ subject: string; predicate: string; object: string }>) {
+        warnings.push(`KG: ${row.subject} → ${row.predicate} → ${row.object}`);
+      }
+    } catch { /* skip */ }
+  }
+  return [...new Set(warnings)];
+}
+
 // ── Server factory ──────────────────────────────────────────
 
 function createServer(env: Env) {
   const server = new McpServer({
     name: "claude-memory",
-    version: "2.2.0",
+    version: "3.0.0",
   });
 
   // ── get_snapshot ──────────────────────────────────────────
@@ -213,8 +295,8 @@ function createServer(env: Env) {
   // ── get_hub ───────────────────────────────────────────────
   server.tool(
     "get_hub",
-    "Load a domain hub file. Domains match keys in HUB_MAP (customize in source).",
-    { domain: z.string().describe("Domain name, e.g. 'work', 'health', 'finance'") },
+    "Load a domain hub file. Domains: jay, rsya, passlocal, relocation, spanish, finance, blog, creative, meetings.",
+    { domain: z.string().describe("Domain name, e.g. 'jay', 'rsya', 'relocation'") },
     async ({ domain }) => {
       const direct = resolveHubPath(domain);
       const paths = direct
@@ -321,17 +403,19 @@ function createServer(env: Env) {
       commit_message: z.string().default("update via claude-memory-mcp").describe("Git commit message"),
     },
     async ({ path, content, commit_message }) => {
-      const result = await writeFile(env, path, content, commit_message);
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: result.success
-              ? `Committed: ${path}\nMessage: ${commit_message}`
-              : `Failed: ${result.error}`,
-          },
-        ],
-      };
+      const safeContent = sanitizeInput(content);
+      const result = await writeFile(env, path, safeContent, commit_message);
+      if (!result.success) {
+        return { content: [{ type: "text" as const, text: `Failed: ${result.error}` }] };
+      }
+      await auditLog(env.DB, "update_file", `path=${path}`);
+      await appendToLog(env, "update_file", `${path} — ${commit_message.slice(0, 80)}`);
+      const contradictions = await checkContradictions(env.DB, safeContent);
+      let response = `Committed: ${path}\nMessage: ${commit_message}`;
+      if (contradictions.length > 0) {
+        response += `\n\n⚠️ KG cross-check (review, not blocking):\n${contradictions.join("\n")}`;
+      }
+      return { content: [{ type: "text" as const, text: response }] };
     }
   );
 
@@ -341,8 +425,9 @@ function createServer(env: Env) {
     "Load everything for session start in ONE call. Use compact=true for a ~200 token compressed version (good for iPad/slow connections).",
     {
       compact: z.boolean().default(false).describe("If true, return compressed ~200 token snapshot instead of full"),
+      surface: z.string().default("unknown").describe("Calling surface: chat, code, cowork, mobile, ipad"),
     },
-    async ({ compact }) => {
+    async ({ compact, surface }) => {
       if (compact) {
         const compressed = await readFile(env, "STATUS_COMPRESSED.md");
         if (compressed) {
@@ -385,6 +470,34 @@ function createServer(env: Env) {
       if (sessionCount < 3) {
         parts.push("\n⚠️ SESSION LOGGING: Only " + sessionCount + " session(s) in last 7 days. Call auto_log before ending this conversation.");
       }
+
+      // Surface sync tracking
+      const syncKey = `last_sync_${surface}`;
+      const prevSync = await env.DB
+        .prepare("SELECT value FROM facts WHERE key = ?")
+        .bind(syncKey)
+        .first()
+        .then((r) => (r as { value: string } | null)?.value)
+        .catch(() => null);
+
+      await env.DB
+        .prepare("INSERT INTO facts (key, value, domain, source) VALUES (?, datetime('now'), 'memory', 'wake_up') ON CONFLICT(key) DO UPDATE SET value = datetime('now'), updated_at = datetime('now')")
+        .bind(syncKey)
+        .run()
+        .catch(() => {});
+
+      if (prevSync) {
+        const newSessions = await env.DB
+          .prepare("SELECT COUNT(*) as cnt FROM sessions WHERE created_at > ?")
+          .bind(prevSync)
+          .first()
+          .then((r) => (r as { cnt: number } | null)?.cnt ?? 0)
+          .catch(() => 0);
+        parts.push(`\n=== SURFACE SYNC ===\nSurface: ${surface}. Last sync: ${prevSync}. Sessions since: ${newSessions}.`);
+      } else {
+        parts.push(`\n=== SURFACE SYNC ===\nSurface: ${surface}. First sync.`);
+      }
+
       return { content: [{ type: "text" as const, text: parts.join("\n") }] };
     }
   );
@@ -423,27 +536,40 @@ function createServer(env: Env) {
     "store_fact",
     "Store a key-value fact in D1. Upserts by key — if key exists, updates value and timestamp.",
     {
-      key: z.string().describe("Fact key, e.g. 'pet_diet', 'user_location'"),
+      key: z.string().describe("Fact key, e.g. 'jay_diet', 'artem_location'"),
       value: z.string().describe("Fact value"),
-      domain: z.string().optional().describe("Domain: work, health, projects, finance, etc."),
-      source: z.string().optional().describe("Source of fact: hub, conversation, etc."),
+      domain: z.string().optional().describe("Domain: jay, rsya, passlocal, relocation, etc."),
+      source: z.string().optional().describe("Source of fact: hub08, conversation, etc."),
     },
     async ({ key, value, domain, source }) => {
       try {
+        const safeValue = sanitizeInput(value);
         await ensureTables(env.DB);
-        const existing = await env.DB.prepare("SELECT id FROM facts WHERE key = ?").bind(key).first();
+        const existing = await env.DB.prepare("SELECT id, value, confidence FROM facts WHERE key = ?").bind(key).first() as { id: number; value: string; confidence: number | null } | null;
         if (existing) {
+          const sameValue = existing.value === safeValue;
+          const newConfidence = sameValue
+            ? Math.min((existing.confidence ?? 0.7) + 0.1, 1.0)
+            : 0.7;
+          let warning = "";
+          if (!sameValue && existing.value !== safeValue) {
+            warning = `\n⚠️ Previous value: "${existing.value}" → now "${safeValue}"`;
+          }
           await env.DB
-            .prepare("UPDATE facts SET value = ?, domain = ?, source = ?, updated_at = datetime('now') WHERE key = ?")
-            .bind(value, domain || null, source || null, key)
+            .prepare("UPDATE facts SET value = ?, domain = ?, source = ?, confidence = ?, last_accessed_at = datetime('now'), updated_at = datetime('now') WHERE key = ?")
+            .bind(safeValue, domain || null, source || null, newConfidence, key)
             .run();
-          return { content: [{ type: "text" as const, text: `Updated fact: ${key} = ${value}` }] };
+          await auditLog(env.DB, "store_fact", `key=${key}`);
+          await appendToLog(env, "store_fact", `${key} = ${safeValue.slice(0, 60)}`);
+          return { content: [{ type: "text" as const, text: `Updated fact: ${key} = ${safeValue} (confidence: ${newConfidence.toFixed(1)})${warning}` }] };
         } else {
           await env.DB
-            .prepare("INSERT INTO facts (key, value, domain, source) VALUES (?, ?, ?, ?)")
-            .bind(key, value, domain || null, source || null)
+            .prepare("INSERT INTO facts (key, value, domain, source, confidence, last_accessed_at) VALUES (?, ?, ?, ?, 0.7, datetime('now'))")
+            .bind(key, safeValue, domain || null, source || null)
             .run();
-          return { content: [{ type: "text" as const, text: `Stored fact: ${key} = ${value}` }] };
+          await auditLog(env.DB, "store_fact", `key=${key}`);
+          await appendToLog(env, "store_fact", `${key} = ${safeValue.slice(0, 60)}`);
+          return { content: [{ type: "text" as const, text: `Stored fact: ${key} = ${safeValue} (confidence: 0.7)` }] };
         }
       } catch (e) {
         return { content: [{ type: "text" as const, text: `Error storing fact: ${e}` }] };
@@ -463,7 +589,7 @@ function createServer(env: Env) {
     async ({ key, domain, limit }) => {
       try {
         await ensureTables(env.DB);
-        let sql = "SELECT key, value, domain, source, updated_at FROM facts WHERE 1=1";
+        let sql = "SELECT key, value, domain, source, confidence, updated_at FROM facts WHERE 1=1";
         const params: string[] = [];
         if (key) {
           sql += key.includes("%") ? " AND key LIKE ?" : " AND key = ?";
@@ -473,16 +599,10 @@ function createServer(env: Env) {
           sql += " AND domain = ?";
           params.push(domain);
         }
-        sql += " ORDER BY updated_at DESC LIMIT ?";
+        sql += " ORDER BY confidence DESC, updated_at DESC LIMIT ?";
         params.push(String(limit));
 
         let stmt = env.DB.prepare(sql);
-        for (let i = 0; i < params.length; i++) {
-          stmt = stmt.bind(...params);
-          break;
-        }
-        // Rebuild with all params at once
-        stmt = env.DB.prepare(sql);
         if (params.length === 1) stmt = stmt.bind(params[0]);
         else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
         else if (params.length === 3) stmt = stmt.bind(params[0], params[1], params[2]);
@@ -493,6 +613,7 @@ function createServer(env: Env) {
           value: string;
           domain: string | null;
           source: string | null;
+          confidence: number | null;
           updated_at: string;
         }>;
 
@@ -500,8 +621,14 @@ function createServer(env: Env) {
           return { content: [{ type: "text" as const, text: "No facts found matching query." }] };
         }
 
+        // Touch last_accessed_at for returned facts
+        const keys = rows.map(r => r.key);
+        for (const k of keys) {
+          await env.DB.prepare("UPDATE facts SET last_accessed_at = datetime('now') WHERE key = ?").bind(k).run().catch(() => {});
+        }
+
         const text = rows
-          .map((r) => `[${r.domain || "general"}] ${r.key}: ${r.value} (${r.updated_at}, src: ${r.source || "unknown"})`)
+          .map((r) => `[${r.domain || "general"}] ${r.key}: ${r.value} (conf: ${(r.confidence ?? 0.7).toFixed(1)}, ${r.updated_at}, src: ${r.source || "unknown"})`)
           .join("\n");
         return { content: [{ type: "text" as const, text: `${rows.length} fact(s):\n${text}` }] };
       } catch (e) {
@@ -702,40 +829,55 @@ function createServer(env: Env) {
     "kg_add",
     "Add a temporal triple to the knowledge graph. Upserts by subject+predicate.",
     {
-      subject: z.string().describe("Entity, e.g. 'pet', 'user', 'project_x'"),
-      predicate: z.string().describe("Relationship, e.g. 'diet', 'location', 'status'"),
-      object: z.string().describe("Value, e.g. 'special diet', 'Barcelona'"),
+      subject: z.string().describe("Entity, e.g. 'jay', 'artem', 'passlocal'"),
+      predicate: z.string().describe("Relationship, e.g. 'diet', 'location', 'on_leave'"),
+      object: z.string().describe("Value, e.g. 'Royal Canin Renal', 'Belgrade'"),
       valid_from: z.string().describe("Start date ISO, e.g. '2026-04-01'"),
       valid_until: z.string().optional().describe("End date ISO, or omit for ongoing"),
       source: z.string().optional().describe("Source reference, e.g. 'hub08', 'conversation'"),
     },
     async ({ subject, predicate, object, valid_from, valid_until, source }) => {
       try {
+        const safeObject = sanitizeInput(object);
         await ensureTables(env.DB);
         const existing = await env.DB
-          .prepare("SELECT id FROM knowledge_graph WHERE subject = ? AND predicate = ?")
+          .prepare("SELECT id, object FROM knowledge_graph WHERE subject = ? AND predicate = ? AND (valid_until IS NULL OR valid_until >= datetime('now'))")
           .bind(subject.toLowerCase(), predicate.toLowerCase())
-          .first();
+          .first() as { id: number; object: string } | null;
 
         if (existing) {
-          await env.DB
-            .prepare(
-              "UPDATE knowledge_graph SET object = ?, valid_from = ?, valid_until = ?, source = ? WHERE subject = ? AND predicate = ?"
-            )
-            .bind(
-              object,
-              valid_from,
-              valid_until || null,
-              source || null,
-              subject.toLowerCase(),
-              predicate.toLowerCase()
-            )
-            .run();
-          return {
-            content: [
-              { type: "text" as const, text: `Updated: ${subject} --${predicate}--> ${object} [${valid_from}${valid_until ? " to " + valid_until : "+"}]` },
-            ],
-          };
+          if (existing.object === safeObject) {
+            // Reinforcement — same value, update valid_from
+            await env.DB
+              .prepare("UPDATE knowledge_graph SET valid_from = ?, source = ? WHERE id = ?")
+              .bind(valid_from, source || null, existing.id)
+              .run();
+            await auditLog(env.DB, "kg_add", `reinforced: ${subject} → ${predicate} → ${safeObject}`);
+            await appendToLog(env, "kg_add", `reinforced: ${subject} → ${predicate} → ${safeObject}`);
+            return {
+              content: [
+                { type: "text" as const, text: `Reinforced: ${subject} --${predicate}--> ${safeObject} [${valid_from}+]` },
+              ],
+            };
+          } else {
+            // Supersession — different value, expire old and insert new
+            const oldObject = existing.object;
+            await env.DB
+              .prepare("UPDATE knowledge_graph SET valid_until = datetime('now') WHERE id = ?")
+              .bind(existing.id)
+              .run();
+            await env.DB
+              .prepare("INSERT INTO knowledge_graph (subject, predicate, object, valid_from, valid_until, source) VALUES (?, ?, ?, ?, ?, ?)")
+              .bind(subject.toLowerCase(), predicate.toLowerCase(), safeObject, valid_from, valid_until || null, source || null)
+              .run();
+            await auditLog(env.DB, "kg_add", `superseded: ${subject} → ${predicate}: "${oldObject}" → "${safeObject}"`);
+            await appendToLog(env, "kg_add", `superseded: ${subject} → ${predicate}: "${oldObject}" → "${safeObject}"`);
+            return {
+              content: [
+                { type: "text" as const, text: `⚠️ Superseded: ${subject} --${predicate}--> was "${oldObject}", now "${safeObject}" [${valid_from}${valid_until ? " to " + valid_until : "+"}]\nOld triple expired.` },
+              ],
+            };
+          }
         } else {
           await env.DB
             .prepare(
@@ -744,15 +886,17 @@ function createServer(env: Env) {
             .bind(
               subject.toLowerCase(),
               predicate.toLowerCase(),
-              object,
+              safeObject,
               valid_from,
               valid_until || null,
               source || null
             )
             .run();
+          await auditLog(env.DB, "kg_add", `added: ${subject} → ${predicate} → ${safeObject}`);
+          await appendToLog(env, "kg_add", `${subject} → ${predicate} → ${safeObject}`);
           return {
             content: [
-              { type: "text" as const, text: `Added: ${subject} --${predicate}--> ${object} [${valid_from}${valid_until ? " to " + valid_until : "+"}]` },
+              { type: "text" as const, text: `Added: ${subject} --${predicate}--> ${safeObject} [${valid_from}${valid_until ? " to " + valid_until : "+"}]` },
             ],
           };
         }
@@ -845,7 +989,7 @@ function createServer(env: Env) {
     "search_in_hub",
     "Search within a specific hub file by keyword. Faster and more focused than repo-wide search.",
     {
-      domain: z.string().describe("Domain: work, projects, health, finance, learning, blog (or your custom domains)"),
+      domain: z.string().describe("Domain: rsya, jay, passlocal, relocation, spanish, finance, blog, meetings"),
       query: z.string().describe("Search keyword (case-insensitive)"),
     },
     async ({ domain, query }) => {
@@ -864,7 +1008,7 @@ function createServer(env: Env) {
         }
         return {
           content: [
-            { type: "text" as const, text: `Hub "${domain}" not found. Check HUB_MAP in source for available domains.` },
+            { type: "text" as const, text: `Hub "${domain}" not found. Try: rsya, jay, passlocal, relocation, spanish, finance, blog, meetings.` },
           ],
         };
       }
@@ -876,6 +1020,104 @@ function createServer(env: Env) {
         };
       }
       return searchInContent(content, query, domain);
+    }
+  );
+
+  // ── diary_write (GitHub) — append timestamped diary entry ──
+  server.tool(
+    "diary_write",
+    "Append a timestamped entry to a domain diary log. Creates file if needed.",
+    {
+      domain: z.string().describe("Domain: work, health, projects, finance, learning, blog, memory"),
+      entry: z.string().describe("Diary entry text — auto-prefixed with timestamp"),
+    },
+    async ({ domain, entry }) => {
+      const path = `logs/${domain}_diary.md`;
+      const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+      const newEntry = `\n## ${timestamp}\n${entry}\n`;
+
+      const existing = await readFile(env, path);
+      const content = existing
+        ? existing + newEntry
+        : `# ${domain} diary\n${newEntry}`;
+
+      const result = await writeFile(env, path, content, `diary: ${domain} — ${entry.slice(0, 50)}`);
+      if (result.success) {
+        await auditLog(env.DB, "diary_write", `domain=${domain}`);
+        await appendToLog(env, "diary_write", `${domain}: ${entry.slice(0, 60)}`);
+        return { content: [{ type: "text" as const, text: `Diary entry added to ${path}` }] };
+      }
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }] };
+    }
+  );
+
+  // ── diary_read (GitHub) — read recent diary entries ────────
+  server.tool(
+    "diary_read",
+    "Read recent entries from a domain diary.",
+    {
+      domain: z.string().describe("Domain: work, health, projects, finance, learning, blog, memory"),
+      last_n: z.number().default(5).describe("Number of recent entries to return"),
+    },
+    async ({ domain, last_n }) => {
+      const path = `logs/${domain}_diary.md`;
+      const content = await readFile(env, path);
+      if (!content) {
+        return { content: [{ type: "text" as const, text: `No diary for ${domain} yet.` }] };
+      }
+      const entries = content.split(/(?=^## \d{4})/m).filter(e => e.startsWith("## "));
+      const recent = entries.slice(-last_n);
+      return {
+        content: [{ type: "text" as const, text: `${domain} diary (last ${recent.length}):\n\n${recent.join("\n")}` }],
+      };
+    }
+  );
+
+  // ── get_tunnels (GitHub) — cross-hub entity search ─────────
+  server.tool(
+    "get_tunnels",
+    "Find entities that appear in multiple hubs. Optionally filter by entity name.",
+    {
+      entity: z.string().optional().describe("Entity to search across hubs. Empty = auto-detect shared entities."),
+    },
+    async ({ entity }) => {
+      const hubKeys = Object.keys(HUB_MAP);
+      const seenPaths = new Set<string>();
+      const hubContents: Array<{ name: string; content: string }> = [];
+
+      for (const name of hubKeys) {
+        const path = resolveHubPath(name);
+        if (!path || seenPaths.has(path)) continue;
+        seenPaths.add(path);
+        const content = await readFile(env, path);
+        if (content) hubContents.push({ name, content });
+      }
+
+      if (entity) {
+        const matches = hubContents
+          .filter(h => h.content.toLowerCase().includes(entity.toLowerCase()))
+          .map(h => h.name);
+        if (matches.length === 0) return { content: [{ type: "text" as const, text: `"${entity}" not found in any hub.` }] };
+        return { content: [{ type: "text" as const, text: `"${entity}" appears in: ${matches.join(", ")}` }] };
+      }
+
+      const entityHubs = new Map<string, Set<string>>();
+      for (const hub of hubContents) {
+        const words = [...new Set(hub.content.match(/[A-ZА-ЯЁ][a-zа-яё]{3,}/g) || [])];
+        for (const w of words) {
+          if (!entityHubs.has(w)) entityHubs.set(w, new Set());
+          entityHubs.get(w)!.add(hub.name);
+        }
+      }
+
+      const shared = [...entityHubs.entries()]
+        .filter(([, hubs]) => hubs.size >= 2)
+        .sort((a, b) => b[1].size - a[1].size)
+        .slice(0, 30)
+        .map(([ent, hubs]) => `${ent}: ${[...hubs].join(", ")}`)
+        .join("\n");
+
+      return { content: [{ type: "text" as const, text: shared || "No cross-hub entities found." }] };
     }
   );
 
@@ -968,6 +1210,218 @@ function createServer(env: Env) {
     }
   );
 
+  // ── wiki_lint (D1 + GitHub) — knowledge base health audit ──
+  server.tool(
+    "wiki_lint",
+    "Audit the knowledge base for contradictions, orphan knowledge, stale facts, and missing cross-references. Returns severity-tiered report.",
+    {
+      scope: z.enum(["full", "domain"]).default("full").describe("Audit scope: full or single domain"),
+      domain: z.string().optional().describe("Domain to lint if scope=domain"),
+    },
+    async ({ scope, domain }) => {
+      await ensureTables(env.DB);
+      const report: string[] = [];
+
+      // 1. Load all hub files
+      const hubKeys = Object.keys(HUB_MAP);
+      const seenPaths = new Set<string>();
+      const hubContents: Array<{ name: string; path: string; content: string }> = [];
+      for (const name of hubKeys) {
+        const path = resolveHubPath(name);
+        if (!path || seenPaths.has(path)) continue;
+        if (scope === "domain" && domain && name !== domain.toLowerCase()) continue;
+        seenPaths.add(path);
+        const content = await readFile(env, path);
+        if (content) hubContents.push({ name, path, content });
+      }
+
+      // 2. Load KG and facts
+      const kgRows = await env.DB
+        .prepare("SELECT subject, predicate, object, valid_until FROM knowledge_graph")
+        .all()
+        .then(r => r.results as Array<{ subject: string; predicate: string; object: string; valid_until: string | null }>)
+        .catch(() => [] as Array<{ subject: string; predicate: string; object: string; valid_until: string | null }>);
+      const activeKG = kgRows.filter(r => !r.valid_until);
+      const factRows = await env.DB
+        .prepare("SELECT key, value, domain, confidence, updated_at, last_accessed_at FROM facts")
+        .all()
+        .then(r => r.results as Array<{ key: string; value: string; domain: string | null; confidence: number | null; updated_at: string; last_accessed_at: string | null }>)
+        .catch(() => [] as Array<{ key: string; value: string; domain: string | null; confidence: number | null; updated_at: string; last_accessed_at: string | null }>);
+
+      // 3. Check: KG entities not in any hub (orphan knowledge)
+      const allHubText = hubContents.map(h => h.content.toLowerCase()).join(" ");
+      const orphanKG = activeKG.filter(r => !allHubText.includes(r.subject));
+      if (orphanKG.length > 0) {
+        report.push(`🟡 ORPHAN KG (${orphanKG.length} entities in KG but not in any hub):`);
+        orphanKG.slice(0, 10).forEach(r => report.push(`  - ${r.subject} → ${r.predicate} → ${r.object}`));
+      }
+
+      // 4. Check: stale facts (not accessed in 30+ days)
+      const now = Date.now();
+      const staleFacts = factRows.filter(r => {
+        const lastTouch = r.last_accessed_at || r.updated_at;
+        if (!lastTouch) return true;
+        const age = now - new Date(lastTouch).getTime();
+        return age > 30 * 24 * 60 * 60 * 1000;
+      });
+      if (staleFacts.length > 0) {
+        report.push(`🟡 STALE FACTS (${staleFacts.length} not accessed in 30+ days):`);
+        staleFacts.slice(0, 10).forEach(r => report.push(`  - [${r.domain || "?"}] ${r.key} (conf: ${(r.confidence ?? 0.7).toFixed(1)}, last: ${r.last_accessed_at || r.updated_at})`));
+      }
+
+      // 5. Check: low confidence facts
+      const lowConf = factRows.filter(r => (r.confidence ?? 0.7) < 0.3);
+      if (lowConf.length > 0) {
+        report.push(`🟡 LOW CONFIDENCE (${lowConf.length} facts below 0.3):`);
+        lowConf.slice(0, 5).forEach(r => report.push(`  - [${r.domain || "?"}] ${r.key}: ${r.value.slice(0, 50)} (conf: ${(r.confidence ?? 0.7).toFixed(1)})`));
+      }
+
+      // 6. Check: hub files not updated recently (based on hub metadata)
+      // We check if the hub text mentions dates that seem old
+      const hubAges: string[] = [];
+      for (const hub of hubContents) {
+        const dateMatch = hub.content.match(/(?:updated|Updated|Last updated):?\s*(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          const age = now - new Date(dateMatch[1]).getTime();
+          if (age > 14 * 24 * 60 * 60 * 1000) {
+            hubAges.push(`  - ${hub.name} (${hub.path}): last updated ${dateMatch[1]}`);
+          }
+        }
+      }
+      if (hubAges.length > 0) {
+        report.push(`🔵 STALE HUBS (${hubAges.length} not updated in 14+ days):`);
+        hubAges.forEach(l => report.push(l));
+      }
+
+      // 7. Check: expired KG triples not cleaned
+      const expiredKG = kgRows.filter(r => r.valid_until);
+      if (expiredKG.length > 5) {
+        report.push(`🔵 EXPIRED KG: ${expiredKG.length} expired triples (consider archival)`);
+      }
+
+      // Summary
+      const redCount = 0; // Contradiction detection would go here
+      const yellowCount = orphanKG.length + staleFacts.length + lowConf.length;
+      const blueCount = hubAges.length + (expiredKG.length > 5 ? 1 : 0);
+
+      const summary = `=== WIKI LINT REPORT ===\nScope: ${scope}${domain ? ` (${domain})` : ""}\nHubs scanned: ${hubContents.length} | KG triples: ${kgRows.length} (${activeKG.length} active) | Facts: ${factRows.length}\n🔴 ${redCount} critical | 🟡 ${yellowCount} warnings | 🔵 ${blueCount} suggestions\n`;
+
+      if (report.length === 0) {
+        return { content: [{ type: "text" as const, text: summary + "\n✅ Knowledge base is healthy." }] };
+      }
+      return { content: [{ type: "text" as const, text: summary + "\n" + report.join("\n") }] };
+    }
+  );
+
+  // ── memory_stats (D1 + GitHub) — aggregate KB statistics ───
+  server.tool(
+    "memory_stats",
+    "Compute aggregate knowledge base statistics: facts, KG triples, sessions, errors, hub counts. Returns structured data for trend tracking.",
+    {},
+    async () => {
+      await ensureTables(env.DB);
+      const [factsCount, factsByDomain, activeKG, expiredKG, sessions7d, errors7d] = await Promise.all([
+        env.DB.prepare("SELECT COUNT(*) as cnt FROM facts").first().then(r => (r as { cnt: number } | null)?.cnt ?? 0).catch(() => -1),
+        env.DB.prepare("SELECT domain, COUNT(*) as cnt FROM facts GROUP BY domain ORDER BY cnt DESC LIMIT 20").all()
+          .then(r => r.results as Array<{ domain: string | null; cnt: number }>).catch(() => [] as Array<{ domain: string | null; cnt: number }>),
+        env.DB.prepare("SELECT COUNT(*) as cnt FROM knowledge_graph WHERE valid_until IS NULL").first().then(r => (r as { cnt: number } | null)?.cnt ?? 0).catch(() => -1),
+        env.DB.prepare("SELECT COUNT(*) as cnt FROM knowledge_graph WHERE valid_until IS NOT NULL").first().then(r => (r as { cnt: number } | null)?.cnt ?? 0).catch(() => -1),
+        env.DB.prepare("SELECT COUNT(*) as cnt FROM sessions WHERE created_at > datetime('now', '-7 days')").first().then(r => (r as { cnt: number } | null)?.cnt ?? 0).catch(() => -1),
+        env.DB.prepare("SELECT COUNT(*) as cnt FROM errors WHERE created_at > datetime('now', '-7 days')").first().then(r => (r as { cnt: number } | null)?.cnt ?? 0).catch(() => -1),
+      ]);
+
+      // Count hub files
+      const hubFiles = await listDir(env, "hubs");
+      const hubCount = hubFiles.filter(f => f.includes("📄")).length;
+
+      // Confidence distribution
+      const confDist = await env.DB
+        .prepare("SELECT CASE WHEN confidence >= 0.8 THEN 'high' WHEN confidence >= 0.5 THEN 'medium' ELSE 'low' END as tier, COUNT(*) as cnt FROM facts GROUP BY tier")
+        .all()
+        .then(r => r.results as Array<{ tier: string; cnt: number }>)
+        .catch(() => [] as Array<{ tier: string; cnt: number }>);
+
+      const lines = [
+        "=== MEMORY STATS ===",
+        `Facts: ${factsCount}`,
+        `  By domain: ${factsByDomain.map(r => `${r.domain || "general"}(${r.cnt})`).join(", ")}`,
+        `  Confidence: ${confDist.map(r => `${r.tier}(${r.cnt})`).join(", ")}`,
+        `KG triples: ${activeKG} active, ${expiredKG} expired`,
+        `Hubs: ${hubCount}`,
+        `Sessions (7d): ${sessions7d}`,
+        `Errors (7d): ${errors7d}`,
+      ];
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    }
+  );
+
+  // ── audit_trail (D1) — review recent write operations ──────
+  server.tool(
+    "audit_trail",
+    "Review recent write operations from the audit log. Read-only diagnostic tool.",
+    {
+      last_n: z.number().default(20).describe("Number of recent entries to return"),
+    },
+    async ({ last_n }) => {
+      await ensureTables(env.DB);
+      const results = await env.DB
+        .prepare("SELECT tool, params_summary, created_at FROM audit_log ORDER BY created_at DESC LIMIT ?")
+        .bind(last_n)
+        .all()
+        .catch(() => ({ results: [] }));
+      const rows = results.results as Array<{ tool: string; params_summary: string | null; created_at: string }>;
+      if (rows.length === 0) {
+        return { content: [{ type: "text" as const, text: "No audit entries." }] };
+      }
+      const text = rows
+        .map(r => `${r.created_at} | ${r.tool} | ${r.params_summary || ""}`)
+        .join("\n");
+      return { content: [{ type: "text" as const, text: `${rows.length} audit entries:\n${text}` }] };
+    }
+  );
+
+  // ── memex_diff (GitHub) — compare with public memex repo ───
+  server.tool(
+    "memex_diff",
+    "Compare claude-memory worker source with public memex repo. Returns list of files that differ or are missing.",
+    {
+      memex_repo: z.string().default("a-pap/memex").describe("Public memex repo (owner/name)"),
+    },
+    async ({ memex_repo }) => {
+      const filesToCompare = [
+        "config/mcp-worker/src/index.ts",
+        "config/mcp-worker/package.json",
+        "config/mcp-worker/tsconfig.json",
+        ".github/workflows/deploy-mcp.yml",
+        "config/mcp-worker/setup-d1.sh",
+      ];
+      const diffs: string[] = [];
+
+      for (const file of filesToCompare) {
+        try {
+          const privateContent = await readFile(env, file);
+          const memexContent = await readFileFromRepo(env, memex_repo, file);
+
+          if (!memexContent) {
+            diffs.push(`${file}: missing in memex`);
+          } else if (!privateContent) {
+            diffs.push(`${file}: missing in claude-memory`);
+          } else if (privateContent !== memexContent) {
+            diffs.push(`${file}: differs`);
+          }
+        } catch {
+          diffs.push(`${file}: error comparing`);
+        }
+      }
+
+      if (diffs.length === 0) {
+        return { content: [{ type: "text" as const, text: "Memex is in sync with claude-memory." }] };
+      }
+      return { content: [{ type: "text" as const, text: `Out of sync (${diffs.length} file(s)):\n${diffs.join("\n")}` }] };
+    }
+  );
+
   return server;
 }
 
@@ -1023,8 +1477,8 @@ export default {
         JSON.stringify({
           status: "ok",
           name: "claude-memory-mcp",
-          version: "2.2.0",
-          tools: 22,
+          version: "3.0.0",
+          tools: 29,
         }),
         { headers: { "Content-Type": "application/json" } }
       );

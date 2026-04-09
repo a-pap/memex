@@ -8,7 +8,7 @@ A blueprint for building persistent, cross-surface memory for Claude using a pri
 |---|----------|----------|
 | **What** | GitHub repo only | Repo + Cloudflare MCP Worker + D1 |
 | **Setup time** | 10 min | 15 min |
-| **Tools** | Git read/write via Claude | 22 MCP tools (wake_up, search, KG, session logs...) |
+| **Tools** | Git read/write via Claude | 29 MCP tools (wake_up, search, KG, lint, stats...) |
 | **Best for** | Claude Code, simple workflows | Claude.ai chat, multi-surface, automated monitoring |
 | **Guide** | [QUICKSTART.md](QUICKSTART.md) | [SETUP_MCP.md](SETUP_MCP.md) |
 
@@ -60,7 +60,7 @@ In **Full mode**, Claude.ai connects to the MCP server directly — no git comma
 3. **Customize** hub files, skills, and rules for your domains
 4. Start a conversation — Claude will use your memory
 
-## MCP Tools (Full mode — 22 tools)
+## MCP Tools (Full mode — 29 tools)
 
 Core: `wake_up`, `get_snapshot`, `get_hub`, `get_rules`, `get_taxonomy`
 Files: `list_files`, `read_file`, `search`, `search_in_hub`, `update_file`
@@ -68,7 +68,9 @@ D1 Facts: `store_fact`, `query_facts`
 Sessions: `log_session`, `auto_log`, `recent_sessions`
 Errors: `log_error`, `error_report`
 Knowledge Graph: `kg_add`, `kg_query`
-Quality: `health_check`, `todo_add`
+Quality: `health_check`, `wiki_lint`, `memory_stats`, `todo_add`
+Audit: `audit_trail`
+Cross-hub: `get_tunnels`, `diary_write`, `diary_read`, `memex_diff`
 Utility: `flush_cache`
 
 ## Contributing
