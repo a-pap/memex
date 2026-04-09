@@ -1,107 +1,40 @@
-# Contributing to the Blueprint
+# Contributing
 
-This blueprint is designed to evolve. Both humans and their Claude instances can propose improvements to the core architecture.
+## For users: fork and customize
 
-## How It Works
+The main use case is **forking this repo and making it your own**. Your private fork contains your personal data — hubs, memory edits, status. The blueprint repo contains generic templates.
 
-The open blueprint repo contains the **generic system** — templates, architecture docs, and patterns that work for anyone. Your private fork contains your **personalized instance** — your hubs, your memory edits, your skills.
+1. Fork → make it private
+2. Follow [QUICKSTART.md](QUICKSTART.md) or [SETUP_MCP.md](SETUP_MCP.md)
+3. Customize everything for your domains
 
-Improvements flow in one direction: **specific learnings → generic patterns**.
+## For contributors: improve the blueprint
 
-## For Humans
+If you've discovered a pattern, skill, or improvement that would help everyone:
 
-If you've built something on top of this system that others would benefit from:
+1. Fork the blueprint repo
+2. Make your change (template, doc, or pattern)
+3. Submit a PR with a clear description
 
-1. **Fork the blueprint repo** (if you haven't already)
-2. **Add your improvement** to the relevant template or doc
-3. **Submit a PR** with a clear description of what it solves
-
-Good contributions:
-- New skill templates (e.g., "weekly-review", "health-tracker", "job-search")
-- Improved RULES.md patterns based on real failure modes
-- Better context loading strategies
-- New hub structure conventions that solve a real problem
-- Integration patterns for MCP connectors
-
-## For Claude Instances
-
-When your Claude notices a systemic improvement during a conversation — a pattern that would benefit all users of this system, not just the current user — it should:
-
-### Step 1: Flag the improvement
-
-Tell your human:
-```
-I noticed a pattern that could improve the blueprint system:
-[Description of the improvement]
-Want me to draft a contribution?
-```
-
-### Step 2: Draft the change
-
-If approved, create a file in your private repo under `contributions/`:
-```
-contributions/YYYY-MM-DD_short_description.md
-```
-
-With this structure:
-```markdown
-# Proposed Blueprint Improvement
-
-## Problem
-[What failure mode or inefficiency this addresses]
-
-## Solution
-[The specific change to templates/architecture]
-
-## Evidence
-[How this was discovered — what went wrong or could be better]
-
-## Files affected
-[Which blueprint files would change]
-
-## Diff
-[The actual proposed changes]
-```
-
-### Step 3: Human reviews and submits
-
-The human reviews the contribution and, if they agree, submits it as a PR to the open blueprint repo.
-
-## What Makes a Good Contribution
-
-**Include:**
-- Patterns that are **domain-agnostic** (work for any user, not just yours)
-- Failure modes with concrete prevention rules
+**Good contributions:**
+- New skill templates (e.g., `weekly-review`, `health-tracker`)
+- Behavioral rules from real failure modes
 - Token optimization strategies with measured impact
-- New skill templates that solve common needs
+- Hub structure conventions that solve a common problem
+- MCP Worker improvements
 
 **Don't include:**
-- Personal data, names, or domain-specific content
-- Changes that only matter for your specific setup
-- Speculative improvements without evidence from real usage
+- Personal data or domain-specific content
+- Speculative improvements without real-world evidence
+- Changes to `examples/` that don't follow the anonymization pattern
 
-## Versioning
+## Code style (MCP Worker)
 
-The blueprint uses semantic versioning in key files:
-- Skills have `version:` in their frontmatter
-- Breaking changes to CLAUDE.md or BOOTSTRAP.md bump the major version
-- New templates or patterns bump the minor version
+- TypeScript, single-file architecture (`config/mcp-worker/src/index.ts`)
+- Zod for input validation
+- GitHub API for repo access, D1 for structured data
+- Keep tool handlers focused — one tool, one job
 
-## Architecture Decisions
+## Claude-assisted contributions
 
-Major changes to the system architecture should include an ADR (Architecture Decision Record) in `docs/decisions/`:
-
-```markdown
-# ADR-NNN: [Title]
-
-## Status: [Proposed | Accepted | Deprecated]
-
-## Context
-[Why this decision is needed]
-
-## Decision
-[What we decided]
-
-## Consequences
-[What changes as a result]
-```
+If Claude notices a systemic improvement during a conversation (a pattern that would benefit all users), it should flag it to you. If you agree, submit it as a PR.

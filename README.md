@@ -197,9 +197,18 @@ Utility: `flush_cache`
 
 See [config/mcp-worker/README.md](config/mcp-worker/README.md) for the full tool reference.
 
-## Contributing
+## Documentation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes.
+| Doc | Purpose |
+|-----|---------|
+| [QUICKSTART.md](QUICKSTART.md) | Lite mode setup (10 min, repo only) |
+| [SETUP_MCP.md](SETUP_MCP.md) | Full mode setup (15 min, MCP + D1) |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Design rationale, token economics |
+| [ONBOARDING.md](ONBOARDING.md) | Automated setup wizard for Claude |
+| [SKILL_CATALOG.md](SKILL_CATALOG.md) | Built-in and custom skill templates |
+| [SECURITY.md](SECURITY.md) | Threat model, PAT guidelines, what not to store |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to propose changes |
+| [CHANGELOG.md](CHANGELOG.md) | Project history (Oct 2025 → present) |
 
 ## License
 
