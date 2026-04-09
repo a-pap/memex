@@ -1,0 +1,68 @@
+name: Lint Templates & Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check STATUS_SNAPSHOT template size
+        run: |
+          lines=$(wc -l < templates/STATUS_SNAPSHOT.md)
+          echo "STATUS_SNAPSHOT template: $lines lines"
+          if [ "$lines" -gt 60 ]; then
+            echo "::error::templates/STATUS_SNAPSHOT.md exceeds 60 lines ($lines lines)"
+            exit 1
+          fi
+
+      - name: Check for personal data in templates
+        run: |
+          PATTERNS="ghp_|github\.com/a-pap|papilov|artem|yandex|rsya|passlocal"
+          if grep -riE "$PATTERNS" templates/ examples/; then
+            echo "::error::Found potential personal data in templates or examples"
+            exit 1
+          fi
+
+      - name: Check internal links
+        run: |
+          EXIT=0
+          for file in README.md ARCHITECTURE.md QUICKSTART.md SETUP.md SETUP_MCP.md; do
+            if [ ! -f "$file" ]; then
+              echo "::warning::Referenced file $file does not exist"
+              continue
+            fi
+            # Extract markdown links [text](path) that point to local files
+            grep -oP '\[.*?\]\(\K[^)#]+' "$file" | grep -v '^http' | while read -r link; do
+              if [ ! -e "$link" ]; then
+                echo "::error::Broken link in $file: $link"
+                EXIT=1
+              fi
+            done
+          done
+          exit $EXIT
+
+      - name: Verify required files exist
+        run: |
+          REQUIRED="README.md ARCHITECTURE.md QUICKSTART.md SETUP_MCP.md CHANGELOG.md CONTRIBUTING.md SECURITY.md LICENSE ONBOARDING.md FIRST_TIME_PROMPT.md SKILL_CATALOG.md"
+          MISSING=0
+          for f in $REQUIRED; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Required file missing: $f"
+              MISSING=1
+            fi
+          done
+          exit $MISSING
+
+      - name: Verify examples directory
+        run: |
+          count=$(ls -1 examples/*.md 2>/dev/null | wc -l)
+          echo "Examples: $count files"
+          if [ "$count" -lt 3 ]; then
+            echo "::error::examples/ should contain at least 3 demo files (found $count)"
+            exit 1
+          fi
