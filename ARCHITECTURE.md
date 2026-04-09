@@ -92,6 +92,46 @@ Keep startup cost (CLAUDE.md + STATUS_SNAPSHOT) under 8K tokens. Everything else
 - Pulls, processes, pushes
 - Updates LAST_SYNC.md timestamp
 
+## Token Economics
+
+Real measurements from a production Memex installation (9 domain hubs, 6+ months of data):
+
+### Startup cost
+
+| What loads | Size | ~Tokens | When |
+|------------|------|---------|------|
+| STATUS_SNAPSHOT.md | ~3.8 KB | ~950 | Every conversation (Level 0) |
+| CLAUDE.md (routing) | ~6.4 KB | ~1,600 | Every conversation (Level 0) |
+| **Startup total** | **~10 KB** | **~2,500** | **Always** |
+
+### On-demand loading
+
+| What loads | Size range | ~Tokens | When |
+|------------|-----------|---------|------|
+| Single hub (small) | 3-8 KB | 750-2,000 | Topic-specific question (Level 1) |
+| Single hub (large) | 15-33 KB | 3,750-8,300 | Deep-dive on a domain (Level 1) |
+| Hub + skill file | 20-40 KB | 5,000-10,000 | Executing a procedure (Level 2) |
+| RULES.md | ~10 KB | ~2,500 | Behavioral calibration |
+| All hubs combined | ~158 KB | ~39,600 | Never (Level 3, rare) |
+
+### Typical session
+
+| Scenario | Total tokens | % of full context |
+|----------|-------------|-------------------|
+| Status check (Level 0 only) | ~2,500 | 5% |
+| Single-topic question (Level 0+1) | ~5,000-7,000 | 10-15% |
+| Deep work session (Level 0+1+2) | ~8,000-12,000 | 20-25% |
+| Full context dump (all files) | ~45,000 | 100% |
+
+### Why this matters
+
+Most memory systems load everything into context on every conversation — 40K-50K+ tokens of history, embeddings, and metadata. This causes:
+- **Token waste** — paying for irrelevant context on every API call
+- **Context rot** — the more irrelevant text in the window, the worse Claude's responses become ([Anthropic docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching))
+- **Slower responses** — more input tokens = higher latency
+
+Memex's graduated loading means a typical session uses **5-7K tokens** of memory context — ~10% of what a dump-everything approach would use.
+
 ## What NOT to Store
 
 - API keys, tokens, passwords (except PAT in memory edits — necessary for private repo access)

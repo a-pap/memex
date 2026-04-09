@@ -1,8 +1,28 @@
-# Claude Persistent Memory System
+# Memex — Persistent Memory for Claude
 
-A blueprint for building persistent, cross-surface memory for Claude using a private GitHub repo as the single source of truth. Optionally backed by a Cloudflare MCP server with D1 database.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-22-green.svg)](config/mcp-worker/)
+[![Setup Time](https://img.shields.io/badge/Setup-10_min-brightgreen.svg)](QUICKSTART.md)
+[![Surfaces](https://img.shields.io/badge/Surfaces-Chat_·_Code_·_Mobile_·_Cowork-purple.svg)](#architecture)
 
-## Two levels
+Claude forgets everything between conversations. Built-in memory is auto-generated,
+unstructured, and lags by days. Memex gives you **structured, cross-surface memory
+that you control** — using a private GitHub repo as the single source of truth.
+
+## How is this different?
+
+There are dozens of `claude-memory` projects on GitHub. Almost all are SQLite-based MCP servers for Claude Code. Memex takes a fundamentally different approach:
+
+| | **Memex** | **Typical memory MCP** |
+|---|---|---|
+| Works in | Chat, Code, Mobile, Cowork | Claude Code only |
+| Storage | Git (versioned, auditable, human-readable) | SQLite (local, opaque) |
+| Structure | Domain hubs, routing table, skills | Flat key-value or embeddings |
+| Recovery | Full restore from repo alone | DB backup needed |
+| Token cost | ~3K startup, on-demand loading | Dumps everything into context |
+| Cross-surface | Same repo, any device | Requires DB sync |
+
+## Two modes
 
 | | **Lite** | **Full** |
 |---|----------|----------|
@@ -25,6 +45,43 @@ A blueprint for building persistent, cross-surface memory for Claude using a pri
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph surfaces["Claude Surfaces"]
+        chat["☁️ Claude.ai Chat"]
+        code["⌨️ Claude Code"]
+        mobile["📱 Mobile"]
+        cowork["🔄 Cowork"]
+    end
+
+    subgraph repo["Git Repository — Source of Truth"]
+        snapshot["STATUS_SNAPSHOT.md\n~3K tokens · Level 0"]
+        hubs["Domain Hubs\nOn-demand · Level 1"]
+        skills["Skills & Rules\nOn-demand · Level 2"]
+        bootstrap["BOOTSTRAP.md\nDisaster Recovery"]
+    end
+
+    subgraph mcp["MCP Worker (Optional — Full Mode)"]
+        worker["Cloudflare Worker\n22 tools · Bearer auth"]
+        d1[("D1 Database\nFacts · Sessions · KG")]
+    end
+
+    chat -->|"git clone/pull"| repo
+    code -->|"local git"| repo
+    mobile -->|"MCP tools"| mcp
+    cowork -->|"scheduled sync"| repo
+
+    worker -->|"GitHub API"| repo
+    worker --- d1
+
+    snapshot -.->|"routes to"| hubs
+    hubs -.->|"triggers"| skills
+```
+
+**Graduated loading:** Claude reads `STATUS_SNAPSHOT` first (~3K tokens, covers 80% of questions). If the topic needs more depth, it loads a single hub (Level 1). Skills and multi-hub analysis (Level 2-3) are rare. Total startup cost: **~5K tokens** vs. 40K+ if you dump everything.
+
+### File structure
+
 ```
 Your Private Repo (source of truth)
 ├── STATUS_SNAPSHOT.md      # Cross-domain status (~50 lines, read first)
@@ -40,7 +97,7 @@ Your Private Repo (source of truth)
 └── archive/                # Chat history backups
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for design rationale.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for design rationale and token economics.
 
 ## How it works
 
@@ -53,12 +110,79 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for design rationale.
 
 In **Full mode**, Claude.ai connects to the MCP server directly — no git commands needed. The `wake_up` tool loads everything in one call.
 
+## What it looks like
+
+<details>
+<summary><strong>Status check — structured response across all domains</strong></summary>
+
+**Prompt:** "Status check"
+
+**Claude's response** (using Memex):
+
+> Here's your current status across all domains:
+>
+> **Critical path:**
+> - Berlin relocation → early June 2026. Waiting on apartment options, visa summary pending.
+> - Max (dog) — mobility restriction ended. Epilepsy monitoring: 2 seizures in 4 months, brain MRI needed.
+>
+> **Work (TechCorp) — Q2 started:**
+> - Auto-placement: +25-30% revenue, exiting beta in Q2
+> - Neural banners: multi-banner generation pipeline, target 10%+ coverage
+>
+> **Side project (SideProject):**
+> - Stripe Connect live. Deploy pipeline broken — needs fix before launch.
+>
+> **Upcoming:**
+> - Apr 15-19: Conference (vacation days 15-17)
+> - Apr 20: Dental appointment
+> - May: EU trip with partner + dogs
+
+Without Memex, Claude would say: *"I don't have any information about your current projects or status."*
+
+</details>
+
+<details>
+<summary><strong>Cross-surface continuity — Chat → Code, context preserved</strong></summary>
+
+**Scenario:**
+1. In **Claude Chat**, you discuss a project architecture decision
+2. Claude commits the decision to `hubs/work.md` and marks it SETTLED in `STATUS_SNAPSHOT.md`
+3. An hour later, you open **Claude Code** in the same repo
+4. Claude reads `STATUS_SNAPSHOT` → sees the decision → doesn't re-ask
+
+```
+# In Claude Code:
+You: "Implement the auth module we discussed"
+Claude: "I see from the hub that you decided on JWT with refresh tokens
+         (settled Apr 9). I'll implement that approach..."
+```
+
+No copy-pasting. No re-explaining. The repo IS the shared brain.
+
+</details>
+
+<details>
+<summary><strong>Disaster recovery — full restore in 2 minutes</strong></summary>
+
+**Scenario:** You clear all Claude memory edits (or start a fresh account).
+
+**Recovery steps:**
+1. Paste the `BOOTSTRAP.md` prompt into a new Claude conversation
+2. Claude clones the repo, reads `STATUS_SNAPSHOT.md`, and restores all memory edits
+3. Within 2 minutes — full context restored, as if nothing happened
+
+This works because the **repo is the source of truth**, not Claude's memory. Memory edits are just behavioral shortcuts; all facts live in the repo.
+
+</details>
+
 ## Quick start
 
 1. **Fork this repo** as your private memory repo
 2. **Follow [QUICKSTART.md](QUICKSTART.md)** (Lite) or [SETUP_MCP.md](SETUP_MCP.md) (Full)
 3. **Customize** hub files, skills, and rules for your domains
 4. Start a conversation — Claude will use your memory
+
+Check the [examples/](examples/) directory for filled-in demos of every file type.
 
 ## MCP Tools (Full mode — 22 tools)
 
@@ -70,6 +194,8 @@ Errors: `log_error`, `error_report`
 Knowledge Graph: `kg_add`, `kg_query`
 Quality: `health_check`, `todo_add`
 Utility: `flush_cache`
+
+See [config/mcp-worker/README.md](config/mcp-worker/README.md) for the full tool reference.
 
 ## Contributing
 
