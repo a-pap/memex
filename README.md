@@ -22,6 +22,70 @@ There are dozens of `claude-memory` projects on GitHub. Almost all are SQLite-ba
 | Token cost | ~3K startup, on-demand loading | Dumps everything into context |
 | Cross-surface | Same repo, any device | Requires DB sync |
 
+## What it looks like
+
+<details>
+<summary><strong>Status check — one prompt, full context</strong></summary>
+
+You say "status check" — Claude reads `STATUS_SNAPSHOT.md` (~3K tokens) and responds:
+
+```
+Here's where things stand:
+
+WORK: Auto-placement beta showing +27% revenue uplift. Mike leaving Apr 25 —
+knowledge transfer is the P0 blocker. Neural banners at 0.45% coverage,
+design review with Tom on Friday.
+
+HEALTH: Max's last urinalysis clean (Mar 15, pH 7.0, no crystals). Diet
+transition to RC Urinary U/C Low Purine starts next week. Brain MRI
+referral pending — target June-August in Berlin.
+
+SIDE PROJECT: SideProject deployment pipeline still blocked on Meta Business
+Verification. No Sentry errors last 7 days. Valera pinged about landing
+page copy — respond by Thursday.
+
+RELOCATION: Berlin apartment search active (budget €1,500/mo). Agent sent
+3 options in Kreuzberg yesterday — review in Drive.
+```
+
+No re-explaining your life. No "can you remind me what you're working on?"
+</details>
+
+<details>
+<summary><strong>Cross-surface continuity</strong></summary>
+
+Morning — Claude.ai Chat on your phone:
+> "Decided to delay overlay format to Q2, auto-placement is the priority."
+
+Claude commits the decision to `hubs/work.md` and `STATUS_SNAPSHOT.md`.
+
+Afternoon — Claude Code on your laptop:
+> "What's the status on overlay?"
+
+Claude reads the same repo:
+> "You moved overlay to Q2 this morning — auto-placement is the current priority.
+> Implementation kickoff is penciled for Apr 14."
+
+No copy-paste. No "as we discussed." The repo is the shared brain.
+</details>
+
+<details>
+<summary><strong>Disaster recovery — full restore in 2 minutes</strong></summary>
+
+Worst case: all memory edits wiped, new Claude model, fresh conversation.
+
+You paste the `BOOTSTRAP.md` prompt. Claude clones the repo, reads your
+full context, re-creates memory edits, and confirms:
+
+```
+✓ Restored from repo.
+  9 hubs loaded, 8 memory edits active, 3 connected tools detected.
+  Last sync: 2 hours ago. No conflicts.
+```
+
+Everything the previous Claude instance knew — this one knows too.
+</details>
+
 ## Two modes
 
 | | **Lite** | **Full** |
