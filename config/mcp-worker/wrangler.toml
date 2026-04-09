@@ -1,0 +1,15 @@
+name = "claude-memory-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+GITHUB_REPO = "YOUR_USERNAME/YOUR_MEMORY_REPO"
+
+# D1 database binding — required for store_fact, query_facts, log_session, etc.
+# To create: npx wrangler d1 create claude-memory-db
+# Then paste the database_id below
+[[d1_databases]]
+binding = "DB"
+database_name = "claude-memory-db"
+database_id = "YOUR_D1_DATABASE_ID"

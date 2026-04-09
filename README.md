@@ -1,36 +1,29 @@
 # Claude Persistent Memory System
 
-A blueprint for building persistent, cross-surface memory for Claude using a private GitHub repo as the single source of truth.
+A blueprint for building persistent, cross-surface memory for Claude using a private GitHub repo as the single source of truth. Optionally backed by a Cloudflare MCP server with D1 database.
 
-**What this solves:** Claude has no persistent memory between conversations. Each new chat starts from zero. This system gives Claude a structured external memory that works across all surfaces (claude.ai chat, mobile, Claude Code, Cowork) — requiring only a GitHub repo and a Personal Access Token.
+## Two levels
 
-**What you get:**
-- Persistent context that survives conversation resets and platform changes
-- Structured domain knowledge organized in hub files
-- Cross-surface sync (desktop, mobile, Code, Cowork all read the same repo)
-- Disaster recovery (full memory restoration from repo alone)
-- Behavioral rules that persist via memory edits
-- Custom skills (repeatable procedures Claude can execute)
-- Graduated context loading (minimal tokens, maximum signal)
+| | **Lite** | **Full** |
+|---|----------|----------|
+| **What** | GitHub repo only | Repo + Cloudflare MCP Worker + D1 |
+| **Setup time** | 10 min | 15 min |
+| **Tools** | Git read/write via Claude | 22 MCP tools (wake_up, search, KG, session logs...) |
+| **Best for** | Claude Code, simple workflows | Claude.ai chat, multi-surface, automated monitoring |
+| **Guide** | [QUICKSTART.md](QUICKSTART.md) | [SETUP_MCP.md](SETUP_MCP.md) |
 
-**Requirements:**
-- A GitHub account with a private repo
-- A Personal Access Token (classic, `repo` scope)
-- Claude Pro/Team/Enterprise (needs computer use for git operations)
-- ~30 minutes for initial setup
+## What you get
 
-## Quick Start
+- **Persistent context** that survives conversation resets and platform changes
+- **Structured domain knowledge** organized in hub files
+- **Cross-surface sync** — desktop, mobile, Code, Cowork all read the same repo
+- **Disaster recovery** — full memory restoration from repo alone
+- **Behavioral rules** that persist via memory edits
+- **Custom skills** — repeatable procedures Claude can execute
+- **Graduated context loading** — minimal tokens at startup, everything else on-demand
+- **Quality loop** (Full mode) — automated health checks, session logging, TODO generation
 
-1. **Fork or clone this repo** as your private memory repo
-2. **Follow [SETUP.md](SETUP.md)** — step-by-step guide
-3. **Customize** hub files, skills, and rules for your domains
-4. **Paste the bootstrap prompt** into a new Claude conversation
-
-That's it. Claude will clone your repo and start using it.
-
-## Architecture Overview
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design rationale.
+## Architecture
 
 ```
 Your Private Repo (source of truth)
@@ -41,12 +34,15 @@ Your Private Repo (source of truth)
 ├── hubs/                   # Domain knowledge files (on-demand)
 ├── skills/                 # Repeatable procedures (on-demand)
 ├── config/                 # Projects, connectors, sync protocol
+│   └── mcp-worker/         # Cloudflare Worker source (Full mode)
 ├── memory/                 # Memory edits + preferences snapshots
 ├── references/             # Deep research artifacts
 └── archive/                # Chat history backups
 ```
 
-## How It Works
+See [ARCHITECTURE.md](ARCHITECTURE.md) for design rationale.
+
+## How it works
 
 1. Claude clones/pulls your private repo at conversation start
 2. Reads `STATUS_SNAPSHOT.md` for quick routing (~3K tokens)
@@ -55,9 +51,29 @@ Your Private Repo (source of truth)
 5. After significant changes, commits and pushes back to the repo
 6. Next conversation (any surface) picks up where the last left off
 
+In **Full mode**, Claude.ai connects to the MCP server directly — no git commands needed. The `wake_up` tool loads everything in one call.
+
+## Quick start
+
+1. **Fork this repo** as your private memory repo
+2. **Follow [QUICKSTART.md](QUICKSTART.md)** (Lite) or [SETUP_MCP.md](SETUP_MCP.md) (Full)
+3. **Customize** hub files, skills, and rules for your domains
+4. Start a conversation — Claude will use your memory
+
+## MCP Tools (Full mode — 22 tools)
+
+Core: `wake_up`, `get_snapshot`, `get_hub`, `get_rules`, `get_taxonomy`
+Files: `list_files`, `read_file`, `search`, `search_in_hub`, `update_file`
+D1 Facts: `store_fact`, `query_facts`
+Sessions: `log_session`, `auto_log`, `recent_sessions`
+Errors: `log_error`, `error_report`
+Knowledge Graph: `kg_add`, `kg_query`
+Quality: `health_check`, `todo_add`
+Utility: `flush_cache`
+
 ## Contributing
 
-This is a living system. If your Claude instance discovers improvements to the core architecture, see [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes to this blueprint.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes.
 
 ## License
 
