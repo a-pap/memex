@@ -104,6 +104,43 @@ If you suspect your PAT was compromised:
 4. **Check git log** for any unauthorized commits
 5. **Rotate `AUTH_PATH_TOKEN`** if MCP Worker is deployed
 
+## Incident history
+
+Transparency matters more than looking clean. If this blueprint leaks a secret, the fix is logged here.
+
+### 2026-04-10 — `setup-d1.sh` leaked a Cloudflare token + legacy MCP bearer + personal KG seed
+
+**What happened.** The initial public sync (2026-04-09, original commit `09e6f99 sync: add MCP worker ...`) copied `config/mcp-worker/setup-d1.sh` as-is from the private memory repo. That file contained:
+
+1. A live `CLOUDFLARE_API_TOKEN` (prefix `cfut_X3R…`, redacted) — hardcoded in `export`.
+2. A legacy MCP URL-path bearer (`1be0cca6…`, redacted) — superseded by the v2.2 auth migration but not revoked.
+3. A `wrangler d1 execute` call seeding the knowledge graph with real personal facts (pet medical history + owner location plans).
+
+**Why the lint didn't catch it.** The initial `.github/workflows/lint-templates.yml` scanned only `templates/` and `examples/` — not `config/` or root scripts. The offending file sat outside the scanned paths.
+
+**Remediation (2026-04-10, in one force-push).**
+
+1. **HEAD scrub.** Rewrote `setup-d1.sh` to require `CLOUDFLARE_API_TOKEN`, `MCP_AUTH_TOKEN`, and `GITHUB_PAT` from the environment (never hardcoded), and replaced the KG seed with a generic placeholder that runs only if an optional `KG_SEED_FILE` is provided.
+2. **History rewrite.** Ran `git filter-repo --path config/mcp-worker/setup-d1.sh --invert-paths --force` to remove every past revision of the file from git history, then re-added the sanitized version in a new commit. Force-pushed `main` with `--force-with-lease`.
+3. **Token rotation** (performed by the repo owner out-of-band):
+   - Cloudflare API token → revoked + regenerated, stored only in Cloudflare dashboard + GitHub Actions `CLOUDFLARE_API_TOKEN` secret.
+   - MCP bearer → regenerated with `openssl rand -hex 32`, stored via `wrangler secret put AUTH_PATH_TOKEN`.
+4. **Lint hardening.** `.github/workflows/lint-templates.yml` now scans `config/`, `.github/`, and all top-level `*.md` / `*.sh` / `*.toml` / `*.yml` files, and explicitly greps for `cfut_`, `ghp_`, `grn_`, and long hex strings that look like bearers.
+5. **CHANGELOG entry** under 2026-04-10 v2.3 documents the change for anyone pulling a fresh fork.
+
+**Takeaways baked into the blueprint.**
+
+- `setup-d1.sh` never keeps secrets in source — it *requires* env vars via the `:?Need …` bash pattern, so missing vars fail the script loudly at step 0.
+- KG seeding is opt-in (`KG_SEED_FILE=...`) and defaults to a generic two-row example. Personal data belongs in your own gitignored seed file.
+- Lint workflow patterns treat every token prefix + high-entropy hex string as a blocker, not just those in templates/examples.
+
+**What this does not fix.** GitHub's API cache still holds the pre-rewrite commit SHAs for a window — cached pages may surface a leaked token for a short time even after force-push. **Token rotation is non-negotiable and already performed.** If you forked memex before 2026-04-10, reset to the new `main`:
+
+```bash
+git fetch origin
+git reset --hard origin/main
+```
+
 ## Reporting
 
 If you find a security issue in the Memex blueprint, please open an issue on the [GitHub repo](https://github.com/a-pap/memex/issues) or contact the maintainer directly.

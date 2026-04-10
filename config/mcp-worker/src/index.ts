@@ -18,7 +18,7 @@ async function githubFetch(env: Env, path: string): Promise<Response> {
     headers: {
       Authorization: `Bearer ${env.GITHUB_PAT}`,
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "claude-memory-mcp/2.2",
+      "User-Agent": "claude-memory-mcp/2.3",
     },
   });
 }
@@ -34,6 +34,22 @@ function base64ToUtf8(b64: string): string {
 
 async function readFile(env: Env, path: string): Promise<string | null> {
   const res = await githubFetch(env, path);
+  if (!res.ok) return null;
+  const data = (await res.json()) as { content?: string; encoding?: string };
+  if (data.content && data.encoding === "base64") {
+    return base64ToUtf8(data.content);
+  }
+  return null;
+}
+
+async function readFileFromRepo(env: Env, repo: string, path: string): Promise<string | null> {
+  const res = await fetch(`${GITHUB_API}/repos/${repo}/contents/${path}`, {
+    headers: {
+      Authorization: `Bearer ${env.GITHUB_PAT}`,
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "claude-memory-mcp/2.3",
+    },
+  });
   if (!res.ok) return null;
   const data = (await res.json()) as { content?: string; encoding?: string };
   if (data.content && data.encoding === "base64") {
@@ -76,7 +92,7 @@ async function writeFile(
       headers: {
         Authorization: `Bearer ${env.GITHUB_PAT}`,
         Accept: "application/vnd.github.v3+json",
-        "User-Agent": "claude-memory-mcp/2.2",
+        "User-Agent": "claude-memory-mcp/2.3",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -100,7 +116,7 @@ async function searchRepo(
       headers: {
         Authorization: `Bearer ${env.GITHUB_PAT}`,
         Accept: "application/vnd.github.v3.text-match+json",
-        "User-Agent": "claude-memory-mcp/2.2",
+        "User-Agent": "claude-memory-mcp/2.3",
       },
     }
   );
@@ -159,7 +175,7 @@ async function ensureTables(db: D1Database): Promise<void> {
       source TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )`),
-    db.prepare(`CREATE INDEX IF NOT EXISTS idx_facts_key ON facts(key)`),
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_facts_key ON facts(key)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_facts_domain ON facts(domain)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_sessions_surface ON sessions(surface)`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_kg_subject ON knowledge_graph(subject)`),
@@ -168,8 +184,9 @@ async function ensureTables(db: D1Database): Promise<void> {
   ]);
 }
 
-// Hub domain-to-path mapping — customize with your own domains
-// Keys are aliases, values are file paths relative to repo root
+// Hub domain-to-path mapping — customize with your own domains.
+// Keys are aliases, values are file paths relative to repo root.
+// Multiple aliases can point to the same hub file (e.g. shorthand + canonical).
 const HUB_MAP: Record<string, string> = {
   work: "hubs/01_WORK.md",
   projects: "hubs/02_PROJECTS.md",
@@ -187,12 +204,35 @@ function resolveHubPath(domain: string): string | null {
   return HUB_MAP[key] || null;
 }
 
+// ── KG contradiction check ──────────────────────────────────
+
+async function checkContradictions(db: D1Database, content: string): Promise<string[]> {
+  const entityCandidates = [...new Set(
+    content.match(/[A-ZА-ЯЁ][a-zа-яё]{2,}/g) || []
+  )];
+  if (entityCandidates.length === 0) return [];
+
+  const warnings: string[] = [];
+  for (const entity of entityCandidates.slice(0, 10)) {
+    try {
+      const rows = await db
+        .prepare("SELECT subject, predicate, object FROM knowledge_graph WHERE subject LIKE ? OR object LIKE ? LIMIT 5")
+        .bind(`%${entity}%`, `%${entity}%`)
+        .all();
+      for (const row of rows.results as Array<{ subject: string; predicate: string; object: string }>) {
+        warnings.push(`KG: ${row.subject} → ${row.predicate} → ${row.object}`);
+      }
+    } catch { /* skip */ }
+  }
+  return [...new Set(warnings)];
+}
+
 // ── Server factory ──────────────────────────────────────────
 
 function createServer(env: Env) {
   const server = new McpServer({
     name: "claude-memory",
-    version: "2.2.0",
+    version: "2.3.0",
   });
 
   // ── get_snapshot ──────────────────────────────────────────
@@ -200,6 +240,7 @@ function createServer(env: Env) {
     "get_snapshot",
     "Load STATUS_SNAPSHOT.md — the main routing file with current status across all domains.",
     {},
+    { title: "Load Status Snapshot", readOnlyHint: true, openWorldHint: true },
     async () => {
       const content = await readFile(env, "STATUS_SNAPSHOT.md");
       return {
@@ -213,8 +254,9 @@ function createServer(env: Env) {
   // ── get_hub ───────────────────────────────────────────────
   server.tool(
     "get_hub",
-    "Load a domain hub file. Domains match keys in HUB_MAP (customize in source).",
-    { domain: z.string().describe("Domain name, e.g. 'work', 'health', 'finance'") },
+    "Load a domain hub file. Domain must match a key configured in HUB_MAP, or be a file under hubs/.",
+    { domain: z.string().describe("Domain name, e.g. 'work', 'health', 'projects' — see HUB_MAP in src/index.ts") },
+    { title: "Load Domain Hub", readOnlyHint: true, openWorldHint: true },
     async ({ domain }) => {
       const direct = resolveHubPath(domain);
       const paths = direct
@@ -247,6 +289,7 @@ function createServer(env: Env) {
     "get_rules",
     "Load MEMORY_EDITS.md — behavioral rules and memory edit directives.",
     {},
+    { title: "Load Memory Edits", readOnlyHint: true, openWorldHint: true },
     async () => {
       const content = await readFile(env, "MEMORY_EDITS.md");
       return {
@@ -264,6 +307,7 @@ function createServer(env: Env) {
     {
       path: z.string().default("").describe("Directory path relative to repo root"),
     },
+    { title: "List Repo Files", readOnlyHint: true, openWorldHint: true },
     async ({ path }) => {
       const files = await listDir(env, path || "");
       return {
@@ -282,6 +326,7 @@ function createServer(env: Env) {
     "read_file",
     "Read any file from the memory repo by path.",
     { path: z.string().describe("File path relative to repo root") },
+    { title: "Read File", readOnlyHint: true, openWorldHint: true },
     async ({ path }) => {
       const content = await readFile(env, path);
       return {
@@ -297,6 +342,7 @@ function createServer(env: Env) {
     "search",
     "Search across all files in the memory repo using GitHub code search.",
     { query: z.string().describe("Search query — keywords, names, topics") },
+    { title: "Search Repo", readOnlyHint: true, openWorldHint: true },
     async ({ query }) => {
       const results = await searchRepo(env, query);
       if (results.length === 0) {
@@ -320,18 +366,18 @@ function createServer(env: Env) {
       content: z.string().describe("Full file content to write"),
       commit_message: z.string().default("update via claude-memory-mcp").describe("Git commit message"),
     },
+    { title: "Write/Update File", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     async ({ path, content, commit_message }) => {
       const result = await writeFile(env, path, content, commit_message);
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: result.success
-              ? `Committed: ${path}\nMessage: ${commit_message}`
-              : `Failed: ${result.error}`,
-          },
-        ],
-      };
+      if (!result.success) {
+        return { content: [{ type: "text" as const, text: `Failed: ${result.error}` }] };
+      }
+      const contradictions = await checkContradictions(env.DB, content);
+      let response = `Committed: ${path}\nMessage: ${commit_message}`;
+      if (contradictions.length > 0) {
+        response += `\n\n⚠️ KG cross-check (review, not blocking):\n${contradictions.join("\n")}`;
+      }
+      return { content: [{ type: "text" as const, text: response }] };
     }
   );
 
@@ -341,8 +387,10 @@ function createServer(env: Env) {
     "Load everything for session start in ONE call. Use compact=true for a ~200 token compressed version (good for iPad/slow connections).",
     {
       compact: z.boolean().default(false).describe("If true, return compressed ~200 token snapshot instead of full"),
+      surface: z.string().default("unknown").describe("Calling surface: chat, code, cowork, mobile, ipad"),
     },
-    async ({ compact }) => {
+    { title: "Session Warm-up", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    async ({ compact, surface }) => {
       if (compact) {
         const compressed = await readFile(env, "STATUS_COMPRESSED.md");
         if (compressed) {
@@ -385,6 +433,34 @@ function createServer(env: Env) {
       if (sessionCount < 3) {
         parts.push("\n⚠️ SESSION LOGGING: Only " + sessionCount + " session(s) in last 7 days. Call auto_log before ending this conversation.");
       }
+
+      // Surface sync tracking
+      const syncKey = `last_sync_${surface}`;
+      const prevSync = await env.DB
+        .prepare("SELECT value FROM facts WHERE key = ?")
+        .bind(syncKey)
+        .first()
+        .then((r) => (r as { value: string } | null)?.value)
+        .catch(() => null);
+
+      await env.DB
+        .prepare("INSERT INTO facts (key, value, domain, source) VALUES (?, datetime('now'), 'memory', 'wake_up') ON CONFLICT(key) DO UPDATE SET value = datetime('now'), updated_at = datetime('now')")
+        .bind(syncKey)
+        .run()
+        .catch(() => {});
+
+      if (prevSync) {
+        const newSessions = await env.DB
+          .prepare("SELECT COUNT(*) as cnt FROM sessions WHERE created_at > ?")
+          .bind(prevSync)
+          .first()
+          .then((r) => (r as { cnt: number } | null)?.cnt ?? 0)
+          .catch(() => 0);
+        parts.push(`\n=== SURFACE SYNC ===\nSurface: ${surface}. Last sync: ${prevSync}. Sessions since: ${newSessions}.`);
+      } else {
+        parts.push(`\n=== SURFACE SYNC ===\nSurface: ${surface}. First sync.`);
+      }
+
       return { content: [{ type: "text" as const, text: parts.join("\n") }] };
     }
   );
@@ -394,6 +470,7 @@ function createServer(env: Env) {
     "get_taxonomy",
     "Get full repo structure: root files + hubs + references + skills.",
     {},
+    { title: "Get Repo Structure", readOnlyHint: true, openWorldHint: true },
     async () => {
       const [root, hubs, refs, skills, logs] = await Promise.all([
         listDir(env, ""),
@@ -423,11 +500,12 @@ function createServer(env: Env) {
     "store_fact",
     "Store a key-value fact in D1. Upserts by key — if key exists, updates value and timestamp.",
     {
-      key: z.string().describe("Fact key, e.g. 'pet_diet', 'user_location'"),
+      key: z.string().describe("Fact key, e.g. 'user_location', 'project_status'"),
       value: z.string().describe("Fact value"),
-      domain: z.string().optional().describe("Domain: work, health, projects, finance, etc."),
-      source: z.string().optional().describe("Source of fact: hub, conversation, etc."),
+      domain: z.string().optional().describe("Domain name — see HUB_MAP in src/index.ts for configured domains"),
+      source: z.string().optional().describe("Source of fact, e.g. 'hub01', 'conversation', 'manual'"),
     },
+    { title: "Store Fact (D1)", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     async ({ key, value, domain, source }) => {
       try {
         await ensureTables(env.DB);
@@ -460,6 +538,7 @@ function createServer(env: Env) {
       domain: z.string().optional().describe("Filter by domain"),
       limit: z.number().default(20).describe("Max results"),
     },
+    { title: "Query Facts (D1)", readOnlyHint: true, openWorldHint: false },
     async ({ key, domain, limit }) => {
       try {
         await ensureTables(env.DB);
@@ -519,6 +598,7 @@ function createServer(env: Env) {
       summary: z.string().describe("Brief session summary"),
       topics: z.string().optional().describe("Comma-separated topics discussed"),
     },
+    { title: "Log Session (D1)", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     async ({ surface, summary, topics }) => {
       try {
         await ensureTables(env.DB);
@@ -541,6 +621,7 @@ function createServer(env: Env) {
       limit: z.number().default(10).describe("Number of recent sessions to return"),
       surface: z.string().optional().describe("Filter by surface"),
     },
+    { title: "Recent Sessions (D1)", readOnlyHint: true, openWorldHint: false },
     async ({ limit, surface }) => {
       try {
         await ensureTables(env.DB);
@@ -591,6 +672,7 @@ function createServer(env: Env) {
       summary: z.string().describe("One-line session summary, e.g. 'debugged MCP auth, deployed v2.1'"),
       surface: z.string().default("chat").describe("Surface override if needed: chat, code, cowork, mobile"),
     },
+    { title: "Auto-log Session", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     async ({ summary, surface }) => {
       try {
         await ensureTables(env.DB);
@@ -614,6 +696,7 @@ function createServer(env: Env) {
       message: z.string().describe("Error message"),
       context: z.string().optional().describe("Additional context"),
     },
+    { title: "Log Error (D1)", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     async ({ tool, message, context }) => {
       try {
         await ensureTables(env.DB);
@@ -636,6 +719,7 @@ function createServer(env: Env) {
       limit: z.number().default(10).describe("Number of recent errors"),
       tool: z.string().optional().describe("Filter by tool name"),
     },
+    { title: "Error Report (D1)", readOnlyHint: true, openWorldHint: false },
     async ({ limit, tool }) => {
       try {
         await ensureTables(env.DB);
@@ -682,6 +766,7 @@ function createServer(env: Env) {
     "flush_cache",
     "Clear any cached state. Useful after manual repo edits or when data seems stale.",
     {},
+    { title: "Flush Cache", readOnlyHint: true, openWorldHint: false },
     async () => {
       // Workers are stateless between requests, so this is a no-op signal.
       // Its main purpose is to serve as a semantic hint that the caller
@@ -702,13 +787,14 @@ function createServer(env: Env) {
     "kg_add",
     "Add a temporal triple to the knowledge graph. Upserts by subject+predicate.",
     {
-      subject: z.string().describe("Entity, e.g. 'pet', 'user', 'project_x'"),
-      predicate: z.string().describe("Relationship, e.g. 'diet', 'location', 'status'"),
-      object: z.string().describe("Value, e.g. 'special diet', 'Barcelona'"),
+      subject: z.string().describe("Entity, e.g. 'user', 'project', 'device'"),
+      predicate: z.string().describe("Relationship, e.g. 'status', 'location', 'owner'"),
+      object: z.string().describe("Value, e.g. 'active', 'Berlin', 'team-alpha'"),
       valid_from: z.string().describe("Start date ISO, e.g. '2026-04-01'"),
       valid_until: z.string().optional().describe("End date ISO, or omit for ongoing"),
-      source: z.string().optional().describe("Source reference, e.g. 'hub08', 'conversation'"),
+      source: z.string().optional().describe("Source reference, e.g. 'hub01', 'conversation', 'manual'"),
     },
+    { title: "Add KG Triple", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     async ({ subject, predicate, object, valid_from, valid_until, source }) => {
       try {
         await ensureTables(env.DB);
@@ -772,6 +858,7 @@ function createServer(env: Env) {
       object: z.string().optional().describe("Filter by object value"),
       active_only: z.boolean().default(true).describe("Only return currently active triples"),
     },
+    { title: "Query KG", readOnlyHint: true, openWorldHint: false },
     async ({ subject, predicate, object, active_only }) => {
       try {
         await ensureTables(env.DB);
@@ -845,9 +932,10 @@ function createServer(env: Env) {
     "search_in_hub",
     "Search within a specific hub file by keyword. Faster and more focused than repo-wide search.",
     {
-      domain: z.string().describe("Domain: work, projects, health, finance, learning, blog (or your custom domains)"),
+      domain: z.string().describe("Domain key from HUB_MAP, or a bare hub filename (without .md)"),
       query: z.string().describe("Search keyword (case-insensitive)"),
     },
+    { title: "Search In Hub", readOnlyHint: true, openWorldHint: true },
     async ({ domain, query }) => {
       const hubPath = resolveHubPath(domain);
       if (!hubPath) {
@@ -864,7 +952,7 @@ function createServer(env: Env) {
         }
         return {
           content: [
-            { type: "text" as const, text: `Hub "${domain}" not found. Check HUB_MAP in source for available domains.` },
+            { type: "text" as const, text: `Hub "${domain}" not found. Check HUB_MAP keys or hubs/ directory contents.` },
           ],
         };
       }
@@ -879,11 +967,111 @@ function createServer(env: Env) {
     }
   );
 
+  // ── diary_write (GitHub) — append timestamped diary entry ──
+  server.tool(
+    "diary_write",
+    "Append a timestamped entry to a domain diary log. Creates file if needed.",
+    {
+      domain: z.string().describe("Domain: work, health, projects, finance, learning, blog, memory"),
+      entry: z.string().describe("Diary entry text — auto-prefixed with timestamp"),
+    },
+    { title: "Write Diary Entry", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    async ({ domain, entry }) => {
+      const path = `logs/${domain}_diary.md`;
+      const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+      const newEntry = `\n## ${timestamp}\n${entry}\n`;
+
+      const existing = await readFile(env, path);
+      const content = existing
+        ? existing + newEntry
+        : `# ${domain} diary\n${newEntry}`;
+
+      const result = await writeFile(env, path, content, `diary: ${domain} — ${entry.slice(0, 50)}`);
+      if (result.success) {
+        return { content: [{ type: "text" as const, text: `Diary entry added to ${path}` }] };
+      }
+      return { content: [{ type: "text" as const, text: `Error: ${result.error}` }] };
+    }
+  );
+
+  // ── diary_read (GitHub) — read recent diary entries ────────
+  server.tool(
+    "diary_read",
+    "Read recent entries from a domain diary.",
+    {
+      domain: z.string().describe("Domain: work, health, projects, finance, learning, blog, memory"),
+      last_n: z.number().default(5).describe("Number of recent entries to return"),
+    },
+    { title: "Read Diary", readOnlyHint: true, openWorldHint: true },
+    async ({ domain, last_n }) => {
+      const path = `logs/${domain}_diary.md`;
+      const content = await readFile(env, path);
+      if (!content) {
+        return { content: [{ type: "text" as const, text: `No diary for ${domain} yet.` }] };
+      }
+      const entries = content.split(/(?=^## \d{4})/m).filter(e => e.startsWith("## "));
+      const recent = entries.slice(-last_n);
+      return {
+        content: [{ type: "text" as const, text: `${domain} diary (last ${recent.length}):\n\n${recent.join("\n")}` }],
+      };
+    }
+  );
+
+  // ── get_tunnels (GitHub) — cross-hub entity search ─────────
+  server.tool(
+    "get_tunnels",
+    "Find entities that appear in multiple hubs. Optionally filter by entity name.",
+    {
+      entity: z.string().optional().describe("Entity to search across hubs. Empty = auto-detect shared entities."),
+    },
+    { title: "Cross-Hub Entities", readOnlyHint: true, openWorldHint: true },
+    async ({ entity }) => {
+      const hubKeys = Object.keys(HUB_MAP);
+      const seenPaths = new Set<string>();
+      const hubContents: Array<{ name: string; content: string }> = [];
+
+      for (const name of hubKeys) {
+        const path = resolveHubPath(name);
+        if (!path || seenPaths.has(path)) continue;
+        seenPaths.add(path);
+        const content = await readFile(env, path);
+        if (content) hubContents.push({ name, content });
+      }
+
+      if (entity) {
+        const matches = hubContents
+          .filter(h => h.content.toLowerCase().includes(entity.toLowerCase()))
+          .map(h => h.name);
+        if (matches.length === 0) return { content: [{ type: "text" as const, text: `"${entity}" not found in any hub.` }] };
+        return { content: [{ type: "text" as const, text: `"${entity}" appears in: ${matches.join(", ")}` }] };
+      }
+
+      const entityHubs = new Map<string, Set<string>>();
+      for (const hub of hubContents) {
+        const words = [...new Set(hub.content.match(/[A-ZА-ЯЁ][a-zа-яё]{3,}/g) || [])];
+        for (const w of words) {
+          if (!entityHubs.has(w)) entityHubs.set(w, new Set());
+          entityHubs.get(w)!.add(hub.name);
+        }
+      }
+
+      const shared = [...entityHubs.entries()]
+        .filter(([, hubs]) => hubs.size >= 2)
+        .sort((a, b) => b[1].size - a[1].size)
+        .slice(0, 30)
+        .map(([ent, hubs]) => `${ent}: ${[...hubs].join(", ")}`)
+        .join("\n");
+
+      return { content: [{ type: "text" as const, text: shared || "No cross-hub entities found." }] };
+    }
+  );
+
   // ── health_check (D1 + GitHub) — structured quality report ──
   server.tool(
     "health_check",
     "Run system health checks. Returns structured report for Chat to act on.",
     {},
+    { title: "Health Check", readOnlyHint: true, openWorldHint: true },
     async () => {
       const checks: string[] = [];
 
@@ -945,6 +1133,7 @@ function createServer(env: Env) {
       files: z.string().describe("Comma-separated file paths to modify"),
       source: z.string().default("auto").describe("What triggered this: error_report, session_check, staleness, manual"),
     },
+    { title: "Add TODO Entry", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     async ({ priority, title, problem, fix, files, source }) => {
       const todoContent = await readFile(env, "TODO.md");
       if (!todoContent) {
@@ -965,6 +1154,48 @@ function createServer(env: Env) {
         return { content: [{ type: "text" as const, text: `Added ${priority} task: ${title}` }] };
       }
       return { content: [{ type: "text" as const, text: `Error: ${result.error}` }] };
+    }
+  );
+
+  // ── memex_diff (GitHub) — compare private memory repo with a public fork ───
+  server.tool(
+    "memex_diff",
+    "Compare this worker source with a public fork (e.g. your own memex blueprint clone). Returns list of files that differ or are missing.",
+    {
+      memex_repo: z.string().describe("Public fork to compare against (owner/name, e.g. 'your-username/memex')"),
+    },
+    { title: "Memex Diff", readOnlyHint: true, openWorldHint: true },
+    async ({ memex_repo }) => {
+      const filesToCompare = [
+        "config/mcp-worker/src/index.ts",
+        "config/mcp-worker/package.json",
+        "config/mcp-worker/tsconfig.json",
+        ".github/workflows/deploy-mcp.yml",
+        "config/mcp-worker/setup-d1.sh",
+      ];
+      const diffs: string[] = [];
+
+      for (const file of filesToCompare) {
+        try {
+          const privateContent = await readFile(env, file);
+          const memexContent = await readFileFromRepo(env, memex_repo, file);
+
+          if (!memexContent) {
+            diffs.push(`${file}: missing in memex`);
+          } else if (!privateContent) {
+            diffs.push(`${file}: missing in claude-memory`);
+          } else if (privateContent !== memexContent) {
+            diffs.push(`${file}: differs`);
+          }
+        } catch {
+          diffs.push(`${file}: error comparing`);
+        }
+      }
+
+      if (diffs.length === 0) {
+        return { content: [{ type: "text" as const, text: "Memex is in sync with claude-memory." }] };
+      }
+      return { content: [{ type: "text" as const, text: `Out of sync (${diffs.length} file(s)):\n${diffs.join("\n")}` }] };
     }
   );
 
@@ -1023,8 +1254,8 @@ export default {
         JSON.stringify({
           status: "ok",
           name: "claude-memory-mcp",
-          version: "2.2.0",
-          tools: 22,
+          version: "2.3.0",
+          tools: 26,
         }),
         { headers: { "Content-Type": "application/json" } }
       );

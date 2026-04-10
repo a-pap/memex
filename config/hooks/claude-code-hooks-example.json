@@ -1,0 +1,17 @@
+{
+  "_comment": "Claude Code SessionEnd hook — calls auto_log MCP on session close. Merge the 'hooks' block into ~/.claude/settings.json (or .claude/settings.local.json for per-repo). Replace the command path with the location where you cloned your memory repo.",
+  "_env_note": "Set MCP_URL in your shell profile (e.g. ~/.zshrc) to the full MCP endpoint of your deployed worker. Example: export MCP_URL=\"https://your-worker.workers.dev/mcp/$MCP_AUTH_TOKEN\"",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/your-memory-repo/config/hooks/auto-log-session.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

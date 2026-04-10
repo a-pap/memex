@@ -8,7 +8,7 @@ Last verified: 2026-04-08 — 12 edits, matches live system.
 ## Live edits (12 total)
 
 1. User's role: Product Manager at TechCorp (Ad Platform team). Use "PM" in casual conversation.
-2. Max's health: Cystinuria III, diet transition mid-April. Epilepsy: 2 seizures (Dec'25, Mar'26). Brain MRI needed Jun-Aug.
+2. Max's health: CKD Stage 2, diet transition mid-April. Epilepsy: 2 seizures (Dec'25, Mar'26). Brain MRI needed Jun-Aug.
 3. Shared memory repo: `git clone https://ghp_EXAMPLE_TOKEN@github.com/username/claude-memory.git`
 4. Berlin relocation: early June 2026. Kreuzberg/Friedrichshain. Budget €1,500/mo.
 5. Learning German: B1 target Aug 2026. Teacher mode when writing in German.

@@ -10,9 +10,9 @@
 
 ## Current conditions
 
-### Cystinuria Type III (diagnosed Oct 2024)
+### Chronic Kidney Disease Stage 2 (diagnosed Oct 2024)
 - **What:** Genetic metabolic disorder → cystine kidney/bladder stones
-- **Diet:** RC Renal → transitioning to RC Urinary U/C Low Purine (mid-April, 14-day gradual)
+- **Diet:** Renal formula → transitioning to urinary-low-purine formula (mid-April, 14-day gradual)
 - **Monitoring:** Urinalysis every 3 months. Last: 2026-03-15 (pH 7.0, no crystals)
 - **Supplements:** Potassium citrate 2x/day
 - **Key rule:** NO high-protein treats. NO chicken jerky. Only prescribed treats.
@@ -35,7 +35,7 @@
 ## Veterinary team
 | Role | Name | Clinic | Notes |
 |------|------|--------|-------|
-| Primary vet | Dr. Weber | CityVet Mitte | Cystinuria specialist. Speaks English. |
+| Primary vet | Dr. Weber | CityVet Mitte | Renal specialist. Speaks English. |
 | Emergency | — | Tierklinik Düppel | 24/7. 25 min drive. |
 | Neurologist | TBD | — | Need referral for MRI in Berlin |
 
@@ -43,12 +43,12 @@
 | What | Dose | Frequency | With food? | Notes |
 |------|------|-----------|------------|-------|
 | Potassium citrate | 75mg/kg | 2x/day | Yes | Alkalinize urine |
-| RC Urinary U/C LP | 150g/day | 2 meals | — | Transitioning from RC Renal |
+| Urinary-LP formula | 150g/day | 2 meals | — | Transitioning from renal formula |
 | Diazepam rectal | 5mg | PRN | — | Emergency only (cluster seizures) |
 
 ## Diet transition plan (Apr 2026)
-| Days | Old (RC Renal) | New (RC Urinary U/C LP) |
-|------|---------------|------------------------|
+| Days | Old (renal formula) | New (urinary-LP formula) |
+|------|---------------------|--------------------------|
 | 1-3 | 75% | 25% |
 | 4-7 | 50% | 50% |
 | 8-11 | 25% | 75% |
@@ -61,6 +61,6 @@
 - Emergency kit: diazepam, potassium citrate, vet records PDF, microchip cert
 
 ## Upcoming
-- **Mid-April:** Complete diet transition to RC Urinary U/C LP
+- **Mid-April:** Complete diet transition to urinary-LP formula
 - **May:** EU trip — carry emergency kit, locate emergency vets on route
 - **Jun-Aug:** Brain MRI in Berlin (schedule after relocation)

@@ -20,13 +20,72 @@ jobs:
             exit 1
           fi
 
-      - name: Check for personal data in templates
+      - name: Scan templates/examples for personal identifiers
         run: |
           PATTERNS="ghp_|github\.com/a-pap|papilov|artem|yandex|rsya|passlocal"
           if grep -riE "$PATTERNS" templates/ examples/; then
             echo "::error::Found potential personal data in templates or examples"
             exit 1
           fi
+
+      - name: Scan whole repo for leaked tokens
+        run: |
+          # Hard token patterns — any hit anywhere in tracked files blocks the
+          # merge. Second line of defence after pre-commit hooks in the private
+          # source repo. Patterns:
+          #   cfut_  - Cloudflare API token
+          #   ghp_   - GitHub classic PAT
+          #   gho_   - GitHub OAuth token
+          #   grn_   - Granola API key
+          #   hex    - long hex strings (generic bearer, legacy MCP token)
+          set +e
+          HITS=$(grep -rEn \
+            -e '(^|[^A-Za-z0-9_])cfut_[A-Za-z0-9_]{20,}' \
+            -e '(^|[^A-Za-z0-9_])ghp_[A-Za-z0-9_]{20,}' \
+            -e '(^|[^A-Za-z0-9_])gho_[A-Za-z0-9_]{20,}' \
+            -e '(^|[^A-Za-z0-9_])grn_[A-Za-z0-9_]{20,}' \
+            -e '(^|[^A-Za-z0-9_])[0-9a-f]{60,}([^A-Za-z0-9_]|$)' \
+            --include='*.md' --include='*.ts' --include='*.js' \
+            --include='*.json' --include='*.yml' --include='*.yaml' \
+            --include='*.toml' --include='*.sh' --include='*.bash' \
+            --include='*.env' --include='*.example' \
+            --exclude-dir=node_modules --exclude-dir=.git \
+            --exclude='package-lock.json' \
+            . 2>/dev/null)
+          set -e
+          if [ -n "$HITS" ]; then
+            echo "::error::Potential leaked token(s) found:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "No leaked tokens detected."
+
+      - name: Scan config/ and .github/ for personal identifiers
+        run: |
+          # Extend the personal-data scan beyond templates/examples. If anyone
+          # copies files from a private memory repo into config/ without
+          # sanitization, this blocks the merge.
+          set +e
+          HITS=$(grep -riEn \
+            -e 'github\.com/a-pap' \
+            -e 'papilov' \
+            -e 'artem' \
+            -e 'yandex' \
+            -e 'rsya' \
+            -e 'passlocal' \
+            -e 'a-papilov\.workers\.dev' \
+            --include='*.md' --include='*.ts' --include='*.js' \
+            --include='*.json' --include='*.yml' --include='*.yaml' \
+            --include='*.toml' --include='*.sh' \
+            --exclude-dir=node_modules --exclude-dir=.git \
+            config/ .github/ 2>/dev/null)
+          set -e
+          if [ -n "$HITS" ]; then
+            echo "::error::Personal identifier(s) found in config/ or .github/:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "No personal identifiers in config/ or .github/."
 
       - name: Check internal links
         run: |

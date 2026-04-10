@@ -2,6 +2,55 @@
 
 All notable changes to the Memex blueprint.
 
+## 2026-04-10 — v2.3: quality loop + annotations + hooks + security scrub
+
+Four new MCP tools, annotation metadata on every tool, a Claude Code SessionEnd
+hook, and a hard security reset — see `SECURITY.md` for the incident record.
+
+### Added
+
+- **Worker v2.3.0 (`config/mcp-worker/src/index.ts`, 26 tools total, +4 since v2.2)**
+  - `auto_log` — low-friction one-line session logger (surface auto-detect)
+  - `health_check` — structured system health report (errors / sessions / KG / freshness)
+  - `todo_add` — programmatic TODO.md append for automated quality loops
+  - `memex_diff` — compare this worker's key files against a public fork
+  - `diary_write` / `diary_read` — per-domain chronological diary logs (GitHub-backed)
+  - `get_tunnels` — find entities that appear in multiple hubs
+- **MCP `ToolAnnotations` on every tool** — `title`, `readOnlyHint`, `destructiveHint`,
+  `idempotentHint`, `openWorldHint` per MCP SDK spec. Split: 17 read-only, 8 write,
+  1 stateless signal.
+- **Claude Code SessionEnd hook** — `config/hooks/auto-log-session.sh` + example
+  install config (`config/hooks/claude-code-hooks-example.json`). Auto-logs every
+  Claude Code session close via the `auto_log` tool. Best-effort, never blocks exit.
+- **Worker `config/mcp-worker/README.md`** — full tool catalogue, deploy steps,
+  D1 schema, Claude.ai connector wiring, version history.
+- **Lint hardening** — `.github/workflows/lint-templates.yml` now scans
+  `config/`, `.github/`, and top-level scripts (not just `templates/` / `examples/`),
+  with explicit token prefix patterns (`cfut_`, `ghp_`, `grn_`, hex bearers).
+
+### Changed
+
+- **Worker `name/version`** → 2.3.0 (was 2.2.0)
+- **User-Agent** → `claude-memory-mcp/2.3` (was 2.2)
+- **`setup-d1.sh`** — rewritten to require three env vars (`CLOUDFLARE_API_TOKEN`,
+  `MCP_AUTH_TOKEN`, `GITHUB_PAT`), seed KG with a generic example only, and
+  auto-detect the worker URL for verification. **No secrets in source.**
+- **Worker `HUB_MAP`** — documented as the single customization point; sample
+  domains renamed to generic `work / projects / health / finance / learning / blog`.
+- **Contradiction check index** — `idx_facts_key` is now `UNIQUE` to enable
+  `ON CONFLICT DO UPDATE` upsert semantics used by `store_fact`.
+
+### Security
+
+- **Removed** committed `cfut_*` Cloudflare API token, `1be0cca6...` legacy MCP
+  Bearer, and a knowledge-graph SQL seed containing real personal data. All
+  past occurrences were stripped from git history via `git filter-repo` and the
+  branch was force-pushed. **Token rotation is a separate step performed by the
+  repo owner on the Cloudflare dashboard.** See `SECURITY.md` for the full
+  incident record and the patched lint workflow that prevents regression.
+
+---
+
 ## 2026-04-09 — Public blueprint release
 
 Extracted from private `claude-memory` repo into a reusable, anonymized blueprint.

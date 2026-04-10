@@ -4,7 +4,7 @@ Last updated: 2026-04-09T12:00 CET
 
 ## Critical path
 - **Berlin relocation → EARLY JUNE 2026** (shifted +1mo). Dresden May 28-30 (partner event) + Hamburg biz trip ~1wk. WAITING: apartment options from Julia, visa summary from lawyer.
-- **Max (dog)** — Mobility restriction ended 8 Apr. Epilepsy: 2 seizures (Dec'25, Mar'26, 3.5mo interval). No medication yet, brain MRI needed (Berlin Jun-Aug). Diet transition: RC Renal → RC Urinary Low Purine, mid-April (14-day gradual).
+- **Max (dog)** — Mobility restriction ended 8 Apr. Epilepsy: 2 seizures (Dec'25, Mar'26, 3.5mo interval). No medication yet, brain MRI needed (Berlin Jun-Aug). Diet transition: renal formula → urinary-low-purine formula, mid-April (14-day gradual).
 - **May holidays:** EU trip with partner + dogs. Apartment scouting + Max brain MRI in Vienna.
 
 ## MCP Infrastructure

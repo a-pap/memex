@@ -49,7 +49,7 @@ Pre-launch SaaS — connects local experience providers (tours, workshops, tasti
 ## Partner & collaborators
 | Who | Role | Contact method |
 |-----|------|---------------|
-| Valera | Co-founder, biz dev | Telegram, weekly sync Fri 15:00 |
+| Lukas | Co-founder, biz dev | Telegram, weekly sync Fri 15:00 |
 | Freelancer (Ana) | Design | Figma, async |
 
 ## Budget
