@@ -1,0 +1,38 @@
+name: Test Structure
+
+# Runs structural integrity tests on every push to main and on PRs.
+# This workflow takes ZERO user-controlled inputs (no event payload data,
+# no PR titles/bodies, no commit messages) — only checks out source and
+# runs hardcoded commands. No injection surface.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Structural tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: config/mcp-worker/package-lock.json
+
+      - name: Install worker dependencies
+        run: |
+          cd config/mcp-worker
+          npm ci
+
+      - name: Run full test suite (fast + slow)
+        run: bash tests/run-all.sh
