@@ -9,6 +9,23 @@ Claude forgets everything between conversations. Built-in memory is auto-generat
 unstructured, and lags by days. Memex gives you **structured, cross-surface memory
 that you control** — using a private GitHub repo as the single source of truth.
 
+## 🚀 Get started — paste this into Claude
+
+Open [Claude Code](https://claude.ai/code) (recommended — it runs the install commands for you) or [claude.ai](https://claude.ai) and paste:
+
+> Help me set up Memex from scratch. Read https://github.com/a-pap/memex/blob/main/START_HERE.md and walk me through it step-by-step. I'm starting with nothing.
+
+Claude will guide you through: forking this repo, generating a GitHub token, creating a free Cloudflare account (OAuth via GitHub, no card), deploying the MCP worker, and connecting it to Claude.ai. Total time: ~15 minutes.
+
+**Requirements:**
+- GitHub account (free)
+- Claude account — Pro/Max/Team/Enterprise for Claude Code (recommended path). Free claude.ai works for Lite mode (copy/paste commands yourself).
+- Cloudflare account for Full mode (free tier is enough, sign up with GitHub OAuth, no card). Skip for Lite.
+
+**Don't have Claude Code?** Install: `curl -fsSL https://claude.ai/install.sh | bash` on macOS/Linux/WSL, or `brew install --cask claude-code` on macOS. [Full install docs](https://code.claude.com/docs/en/setup).
+
+**Want the ultra-light version (no Cloudflare, just a git repo)?** Start with [QUICKSTART.md](QUICKSTART.md) — 10 minutes.
+
 ## How is this different?
 
 There are dozens of `claude-memory` projects on GitHub. Almost all are SQLite-based MCP servers for Claude Code. Memex takes a fundamentally different approach:
