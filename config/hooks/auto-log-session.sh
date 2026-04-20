@@ -1,45 +1,31 @@
 #!/bin/bash
-# Claude Code SessionEnd hook — calls the auto_log MCP tool on session close.
+# Claude Code SessionEnd hook — calls auto_log MCP tool on session close.
 #
-# Purpose
-#   Every Claude Code session produces a structured log entry in D1 (sessions
-#   table) without manual intervention. Addresses the common failure mode where
-#   98%+ of conversations end without being logged, leaving future sessions blind.
+# Purpose: Every Claude Code session produces a structured log entry in D1
+# (sessions table) without requiring manual intervention. Addresses P0-C
+# original problem: 98% conversations ended without logging.
 #
-# Install
-#   1. Copy this directory into your memory repo (or keep it where it is).
-#   2. Export MCP_URL for your deployed worker:
-#        export MCP_URL="https://<your-worker>.workers.dev/mcp"
-#      or for authed path form:
-#        export MCP_URL="https://<your-worker>.workers.dev/mcp/$MCP_AUTH_TOKEN"
-#   3. Merge the hooks block from config/hooks/claude-code-hooks-example.json
-#      into ~/.claude/settings.json (or .claude/settings.local.json for per-repo).
-#   4. Update the `command` path in that JSON to point at THIS script.
+# Install: Reference this script from a SessionEnd hook in ~/.claude/settings.json
+# or .claude/settings.local.json. See config/claude-code-hooks-example.json.
 #
-# Environment contract
-#   MCP_URL             — full MCP endpoint. Required.
-#   MCP_SURFACE         — surface label (default: "code")
-#   MCP_SESSION_SUMMARY — custom summary (default: auto-generated from cwd + time)
+# Hook event payload is passed via stdin as JSON. We don't need it for the minimal
+# version — just log "session ended" with timestamp and surface=code.
 #
-# Hook payload
-#   Claude Code writes the SessionEnd event JSON to stdin. We currently ignore
-#   it — only need the timestamp and cwd. Feel free to parse it if you want
-#   richer summaries (see https://docs.claude.com/ for the payload shape).
+# Environment contract:
+#   MCP_URL            — defaults to claude-memory-mcp production URL
+#   MCP_SURFACE        — defaults to "code"
+#   MCP_SESSION_SUMMARY (optional) — custom summary; otherwise auto-generated
 
 set -euo pipefail
 
-MCP_URL="${MCP_URL:-}"
+MCP_URL="${MCP_URL:-https://claude-memory-mcp.OWNER.workers.dev/mcp}"
 SURFACE="${MCP_SURFACE:-code}"
 
-if [ -z "$MCP_URL" ]; then
-  # Hook runs silently by design — don't spam the user at session close.
-  exit 0
-fi
-
-# Slurp stdin to avoid broken-pipe errors from Claude Code's writer
+# Read stdin (Claude Code passes event JSON) — we ignore it for the minimal impl
+# but slurp it to avoid broken pipe errors.
 read -r _STDIN_JSON < /dev/stdin 2>/dev/null || true
 
-# Build a generic summary unless caller provided one
+# Construct a generic summary if none provided
 if [ -z "${MCP_SESSION_SUMMARY:-}" ]; then
   CWD="$(basename "$(pwd)")"
   TS="$(date +%Y-%m-%dT%H:%M)"
@@ -48,7 +34,7 @@ else
   SUMMARY="$MCP_SESSION_SUMMARY"
 fi
 
-# Minimal JSON escape (handles embedded quotes; assumes no raw backslashes)
+# Escape summary for JSON (minimal — assumes no embedded backslashes)
 SUMMARY_ESCAPED="${SUMMARY//\"/\\\"}"
 
 PAYLOAD=$(cat <<EOF
@@ -56,7 +42,7 @@ PAYLOAD=$(cat <<EOF
 EOF
 )
 
-# Best-effort POST — never block session exit on network errors
+# Best-effort POST — don't block session exit on MCP errors
 curl -s --max-time 5 \
   -H "Accept: application/json, text/event-stream" \
   -H "Content-Type: application/json" \
@@ -64,4 +50,5 @@ curl -s --max-time 5 \
   -d "$PAYLOAD" \
   "$MCP_URL" > /dev/null 2>&1 || true
 
+# Always exit 0 — hooks should not fail the session
 exit 0
