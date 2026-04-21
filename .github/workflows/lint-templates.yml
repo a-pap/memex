@@ -22,7 +22,13 @@ jobs:
 
       - name: Scan templates/examples for personal identifiers
         run: |
-          PATTERNS="ghp_|github\.com/a-pap|papilov|artem|yandex|rsya|passlocal"
+          # Tighten `ghp_` to at least 36 alnum chars so demo placeholders
+          # (ghp_EXAMPLE_TOKEN) and how-to-scan shell snippets ("ghp_\|sk-\|…")
+          # don't trigger this check. A real GitHub PAT is 40 chars after the
+          # prefix; 36+ covers any future length tweak. 2026-04-20 false
+          # positives in templates/skills/weekly-backup/SKILL.md and
+          # examples/MEMORY_EDITS_demo.md prompted the tightening.
+          PATTERNS="ghp_[A-Za-z0-9]{36,}|github\.com/a-pap|papilov|artem|yandex|rsya|passlocal"
           if grep -riE "$PATTERNS" templates/ examples/; then
             echo "::error::Found potential personal data in templates or examples"
             exit 1
