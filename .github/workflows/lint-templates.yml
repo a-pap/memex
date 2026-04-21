@@ -73,8 +73,12 @@ jobs:
           # sanitization, this blocks the merge.
           #
           # Exclusions:
-          #   lint-templates.yml      — this workflow defines the patterns as
-          #                             string literals; would self-match.
+          #   lint-*.yml              — lint workflows define the patterns as
+          #                             string literals / document them in
+          #                             comments; every such file would self-
+          #                             match. Covers lint-templates.yml and
+          #                             lint-secrets.yml today, plus any
+          #                             future lint-* scan worker.
           #   package-lock.json       — long base64 integrity hashes are dense
           #                             enough to collide on substrings by
           #                             chance (false positive seen on sha512-
@@ -92,7 +96,7 @@ jobs:
             --include='*.json' --include='*.yml' --include='*.yaml' \
             --include='*.toml' --include='*.sh' \
             --exclude-dir=node_modules --exclude-dir=.git \
-            --exclude='lint-templates.yml' \
+            --exclude='lint-*.yml' \
             --exclude='package-lock.json' \
             config/ .github/ 2>/dev/null)
           set -e
