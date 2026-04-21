@@ -5,6 +5,8 @@
 # Order matters:
 #   1. Secret scan first — fast (~50ms), high-stakes block (no leaked tokens)
 #   2. Structural tests --quick — slower (~200ms), catches drift before commit
+#      (skipped if tests/run-all.sh is absent, e.g. in the memex public mirror
+#      where the structural suite is claude-memory-specific)
 #
 # Either failing aborts the commit. To bypass (use sparingly), run with
 # git commit --no-verify. The GitHub Actions workflow at
@@ -19,4 +21,6 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 "$REPO_ROOT/config/hooks/pre-commit-secret-scan.sh"
 
 # Structural tests (fast subset only — slow tests like tsc run in CI)
-bash "$REPO_ROOT/tests/run-all.sh" --quick
+if [ -f "$REPO_ROOT/tests/run-all.sh" ]; then
+  bash "$REPO_ROOT/tests/run-all.sh" --quick
+fi
