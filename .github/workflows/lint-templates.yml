@@ -71,6 +71,14 @@ jobs:
           # Extend the personal-data scan beyond templates/examples. If anyone
           # copies files from a private memory repo into config/ without
           # sanitization, this blocks the merge.
+          #
+          # Exclusions:
+          #   lint-templates.yml      — this workflow defines the patterns as
+          #                             string literals; would self-match.
+          #   package-lock.json       — long base64 integrity hashes are dense
+          #                             enough to collide on substrings by
+          #                             chance (false positive seen on sha512-
+          #                             bSaRWCv9iO8/… in miniflare's lockfile).
           set +e
           HITS=$(grep -riEn \
             -e 'github\.com/a-pap' \
@@ -84,6 +92,8 @@ jobs:
             --include='*.json' --include='*.yml' --include='*.yaml' \
             --include='*.toml' --include='*.sh' \
             --exclude-dir=node_modules --exclude-dir=.git \
+            --exclude='lint-templates.yml' \
+            --exclude='package-lock.json' \
             config/ .github/ 2>/dev/null)
           set -e
           if [ -n "$HITS" ]; then
