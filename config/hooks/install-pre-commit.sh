@@ -3,7 +3,8 @@
 #
 # The wrapper at config/hooks/pre-commit.sh chains:
 #   1. Secret scanner (config/hooks/pre-commit-secret-scan.sh)
-#   2. Structural test suite quick mode (tests/run-all.sh --quick)
+#   2. STATUS_SNAPSHOT auto-prune (scripts/status-snapshot-trim.sh)
+#   3. Structural test suite quick mode (tests/run-all.sh --quick)
 #
 # Safe to re-run — replaces any existing hook with a symlink to the wrapper.
 # Backs up any pre-existing non-symlink hook to .git/hooks/pre-commit.backup.<ts>.

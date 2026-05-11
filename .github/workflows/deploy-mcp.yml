@@ -1,5 +1,21 @@
 name: Deploy MCP Worker
 
+# This workflow is the SOURCE OF TRUTH; it is mirrored to a-pap/memex (public)
+# via config/memex-sync-manifest.yml. The public mirror ships placeholder
+# values in config/mcp-worker/wrangler.toml (GITHUB_REPO=YOUR_USERNAME/...,
+# database_id=YOUR_D1_DATABASE_ID) and does NOT carry CLOUDFLARE_API_TOKEN /
+# CLOUDFLARE_ACCOUNT_ID / GH_PAT secrets. Without the secret-presence guard
+# below, every push to memex/main fired this workflow and crashed at
+# `wrangler deploy` — five failed-run emails between 2026-04-10 and 2026-05-11.
+#
+# Guard semantics:
+#   - On any repo with both CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+#     secrets set: typecheck runs, deploy runs (this is claude-memory + any
+#     correctly-configured fork).
+#   - On a repo without one of those secrets: typecheck still runs (useful
+#     CI signal for Dependabot bumps and PRs), deploy + secret-put are
+#     skipped with a clear log message.
+
 on:
   push:
     branches: [main]
@@ -27,14 +43,33 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      - name: Check Cloudflare credentials
+        id: cf
+        env:
+          CF_TOKEN_PRESENT: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          CF_ACCOUNT_PRESENT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          if [ "$CF_TOKEN_PRESENT" = "true" ] && [ "$CF_ACCOUNT_PRESENT" = "true" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials present — deploy will run."
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping deploy: CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID secret missing."
+            echo "Expected on a-pap/memex (public template — canonical deploy is from a-pap/claude-memory)."
+            echo "If this is your fork: set both secrets at Settings -> Secrets and variables -> Actions, then re-run."
+          fi
+
       - name: Deploy to Cloudflare Workers
+        if: steps.cf.outputs.configured == 'true'
         run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Set worker secrets
-        run: echo "${{ secrets.GH_PAT }}" | npx wrangler secret put GITHUB_PAT
+        if: steps.cf.outputs.configured == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_PAT_SECRET: ${{ secrets.GH_PAT }}
+        run: printf '%s' "$GH_PAT_SECRET" | npx wrangler secret put GITHUB_PAT
