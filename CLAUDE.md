@@ -16,7 +16,7 @@ Open-source blueprint of the multi-surface Claude memory system. Synced **one-wa
 ## What lives here
 
 - README.md — public-facing описание архитектуры
-- `architecture/` — generic схемы (без хабов с personal-routing)
+- `ARCHITECTURE.md` — generic схемы (без хабов с personal-routing)
 - Generic примеры конфигов / hooks / template'ов
 - Никаких `hubs/*` (private), никаких `STATUS_SNAPSHOT.md` (private)
 
