@@ -1,7 +1,7 @@
 # Memex — Persistent Memory for Claude
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-22-green.svg)](config/mcp-worker/)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-26-green.svg)](config/mcp-worker/)
 [![Setup Time](https://img.shields.io/badge/Setup-10_min-brightgreen.svg)](QUICKSTART.md)
 [![Surfaces](https://img.shields.io/badge/Surfaces-Chat_·_Code_·_Mobile_·_Cowork-purple.svg)](#architecture)
 
@@ -109,7 +109,7 @@ Everything the previous Claude instance knew — this one knows too.
 |---|----------|----------|
 | **What** | GitHub repo only | Repo + Cloudflare MCP Worker + D1 |
 | **Setup time** | 10 min | 15 min |
-| **Tools** | Git read/write via Claude | 22 MCP tools (wake_up, search, KG, session logs...) |
+| **Tools** | Git read/write via Claude | 26 MCP tools (wake_up, search, KG, session logs...) |
 | **Best for** | Claude Code, simple workflows | Claude.ai chat, multi-surface, automated monitoring |
 | **Guide** | [QUICKSTART.md](QUICKSTART.md) | [SETUP_MCP.md](SETUP_MCP.md) |
 
