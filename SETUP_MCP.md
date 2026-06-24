@@ -47,7 +47,8 @@ database_id = "paste-your-database-id-here"
 # Your GitHub PAT (for reading/writing repo files)
 npx wrangler secret put GITHUB_PAT
 
-# Optional: URL path token for authenticated access
+# Required: URL path token for authenticated access.
+# Without it the Worker fails closed — every /mcp request returns 503.
 npx wrangler secret put AUTH_PATH_TOKEN
 ```
 

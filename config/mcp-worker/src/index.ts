@@ -32,14 +32,19 @@ function base64ToUtf8(b64: string): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-async function readFile(env: Env, path: string): Promise<string | null> {
-  const res = await githubFetch(env, path);
+// Decode a GitHub "get contents" response into UTF-8 text, or null if the
+// request failed or the payload wasn't base64-encoded file content.
+async function decodeContentsResponse(res: Response): Promise<string | null> {
   if (!res.ok) return null;
   const data = (await res.json()) as { content?: string; encoding?: string };
   if (data.content && data.encoding === "base64") {
     return base64ToUtf8(data.content);
   }
   return null;
+}
+
+async function readFile(env: Env, path: string): Promise<string | null> {
+  return decodeContentsResponse(await githubFetch(env, path));
 }
 
 async function readFileFromRepo(env: Env, repo: string, path: string): Promise<string | null> {
@@ -50,12 +55,7 @@ async function readFileFromRepo(env: Env, repo: string, path: string): Promise<s
       "User-Agent": "claude-memory-mcp/2.3",
     },
   });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { content?: string; encoding?: string };
-  if (data.content && data.encoding === "base64") {
-    return base64ToUtf8(data.content);
-  }
-  return null;
+  return decodeContentsResponse(res);
 }
 
 async function listDir(env: Env, path: string): Promise<string[]> {
@@ -184,6 +184,16 @@ async function ensureTables(db: D1Database): Promise<void> {
   ]);
 }
 
+// Bind a variable number of params to a prepared statement. D1's .bind() is
+// variadic, so spreading works for 0, 1, or N params — unlike a hardcoded
+// .bind(a, b, c) ladder, which breaks for any other count.
+function bindParams(
+  stmt: D1PreparedStatement,
+  params: unknown[]
+): D1PreparedStatement {
+  return params.length > 0 ? stmt.bind(...params) : stmt;
+}
+
 // Hub domain-to-path mapping — customize with your own domains.
 // Keys are aliases, values are file paths relative to repo root.
 // Multiple aliases can point to the same hub file (e.g. shorthand + canonical).
@@ -222,7 +232,12 @@ async function checkContradictions(db: D1Database, content: string): Promise<str
       for (const row of rows.results as Array<{ subject: string; predicate: string; object: string }>) {
         warnings.push(`KG: ${row.subject} → ${row.predicate} → ${row.object}`);
       }
-    } catch { /* skip */ }
+    } catch (e) {
+      // Don't crash the contradiction check on a single entity's DB failure,
+      // but make the failure observable (logs/monitoring) instead of swallowing it.
+      console.error(`checkContradictions: KG lookup failed for entity "${entity}":`, e);
+      warnings.push(`KG lookup failed for "${entity}" (see logs)`);
+    }
   }
   return [...new Set(warnings)];
 }
@@ -555,17 +570,7 @@ function createServer(env: Env) {
         sql += " ORDER BY updated_at DESC LIMIT ?";
         params.push(String(limit));
 
-        let stmt = env.DB.prepare(sql);
-        for (let i = 0; i < params.length; i++) {
-          stmt = stmt.bind(...params);
-          break;
-        }
-        // Rebuild with all params at once
-        stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-        else if (params.length === 3) stmt = stmt.bind(params[0], params[1], params[2]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           key: string;
@@ -634,10 +639,7 @@ function createServer(env: Env) {
         sql += " ORDER BY created_at DESC LIMIT ?";
         params.push(limit);
 
-        let stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           surface: string;
@@ -732,10 +734,7 @@ function createServer(env: Env) {
         sql += " ORDER BY created_at DESC LIMIT ?";
         params.push(limit);
 
-        let stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           tool: string | null;
@@ -884,11 +883,7 @@ function createServer(env: Env) {
         }
         sql += " ORDER BY valid_from DESC LIMIT 50";
 
-        let stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-        else if (params.length === 3) stmt = stmt.bind(params[0], params[1], params[2]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           subject: string;
@@ -1269,15 +1264,22 @@ export default {
       });
     }
 
+    // Auth must fail CLOSED: if no token is configured, reject rather than
+    // letting every /mcp request through unauthenticated.
+    if (!env.AUTH_PATH_TOKEN) {
+      return new Response(
+        JSON.stringify({ error: "server misconfigured: AUTH_PATH_TOKEN not set" }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // If /mcp/{token} — validate token
-    if (env.AUTH_PATH_TOKEN) {
-      const match = path.match(/^\/mcp\/(.+)$/);
-      if (match && match[1] !== env.AUTH_PATH_TOKEN) {
-        return new Response(JSON.stringify({ error: "unauthorized" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    const match = path.match(/^\/mcp\/(.+)$/);
+    if (match && match[1] !== env.AUTH_PATH_TOKEN) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Initialize D1 tables on first request (idempotent)
