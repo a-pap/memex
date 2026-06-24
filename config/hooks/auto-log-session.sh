@@ -34,13 +34,14 @@ else
   SUMMARY="$MCP_SESSION_SUMMARY"
 fi
 
-# Escape summary for JSON (minimal — assumes no embedded backslashes)
-SUMMARY_ESCAPED="${SUMMARY//\"/\\\"}"
-
-PAYLOAD=$(cat <<EOF
-{"jsonrpc":"2.0","method":"tools/call","id":1,"params":{"name":"auto_log","arguments":{"summary":"${SUMMARY_ESCAPED}","surface":"${SURFACE}"}}}
-EOF
-)
+# Build the JSON payload with jq so summary/surface are correctly encoded.
+# jq --arg performs full JSON string encoding — embedded quotes, backslashes,
+# newlines, tabs, and control characters that naive shell substitution
+# (${var//\"/...}) would corrupt are all escaped safely.
+PAYLOAD=$(jq -cn \
+  --arg summary "$SUMMARY" \
+  --arg surface "$SURFACE" \
+  '{jsonrpc:"2.0",method:"tools/call",id:1,params:{name:"auto_log",arguments:{summary:$summary,surface:$surface}}}')
 
 # Best-effort POST — don't block session exit on MCP errors
 curl -s --max-time 5 \
