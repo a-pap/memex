@@ -32,14 +32,19 @@ function base64ToUtf8(b64: string): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-async function readFile(env: Env, path: string): Promise<string | null> {
-  const res = await githubFetch(env, path);
+// Decode a GitHub "get contents" response into UTF-8 text, or null if the
+// request failed or the payload wasn't base64-encoded file content.
+async function decodeContentsResponse(res: Response): Promise<string | null> {
   if (!res.ok) return null;
   const data = (await res.json()) as { content?: string; encoding?: string };
   if (data.content && data.encoding === "base64") {
     return base64ToUtf8(data.content);
   }
   return null;
+}
+
+async function readFile(env: Env, path: string): Promise<string | null> {
+  return decodeContentsResponse(await githubFetch(env, path));
 }
 
 async function readFileFromRepo(env: Env, repo: string, path: string): Promise<string | null> {
@@ -50,12 +55,7 @@ async function readFileFromRepo(env: Env, repo: string, path: string): Promise<s
       "User-Agent": "claude-memory-mcp/2.3",
     },
   });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { content?: string; encoding?: string };
-  if (data.content && data.encoding === "base64") {
-    return base64ToUtf8(data.content);
-  }
-  return null;
+  return decodeContentsResponse(res);
 }
 
 async function listDir(env: Env, path: string): Promise<string[]> {
