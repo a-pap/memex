@@ -184,6 +184,16 @@ async function ensureTables(db: D1Database): Promise<void> {
   ]);
 }
 
+// Bind a variable number of params to a prepared statement. D1's .bind() is
+// variadic, so spreading works for 0, 1, or N params — unlike a hardcoded
+// .bind(a, b, c) ladder, which breaks for any other count.
+function bindParams(
+  stmt: D1PreparedStatement,
+  params: unknown[]
+): D1PreparedStatement {
+  return params.length > 0 ? stmt.bind(...params) : stmt;
+}
+
 // Hub domain-to-path mapping — customize with your own domains.
 // Keys are aliases, values are file paths relative to repo root.
 // Multiple aliases can point to the same hub file (e.g. shorthand + canonical).
@@ -560,17 +570,7 @@ function createServer(env: Env) {
         sql += " ORDER BY updated_at DESC LIMIT ?";
         params.push(String(limit));
 
-        let stmt = env.DB.prepare(sql);
-        for (let i = 0; i < params.length; i++) {
-          stmt = stmt.bind(...params);
-          break;
-        }
-        // Rebuild with all params at once
-        stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-        else if (params.length === 3) stmt = stmt.bind(params[0], params[1], params[2]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           key: string;
@@ -639,10 +639,7 @@ function createServer(env: Env) {
         sql += " ORDER BY created_at DESC LIMIT ?";
         params.push(limit);
 
-        let stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           surface: string;
@@ -737,10 +734,7 @@ function createServer(env: Env) {
         sql += " ORDER BY created_at DESC LIMIT ?";
         params.push(limit);
 
-        let stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           tool: string | null;
@@ -889,11 +883,7 @@ function createServer(env: Env) {
         }
         sql += " ORDER BY valid_from DESC LIMIT 50";
 
-        let stmt = env.DB.prepare(sql);
-        if (params.length === 1) stmt = stmt.bind(params[0]);
-        else if (params.length === 2) stmt = stmt.bind(params[0], params[1]);
-        else if (params.length === 3) stmt = stmt.bind(params[0], params[1], params[2]);
-
+        const stmt = bindParams(env.DB.prepare(sql), params);
         const results = await stmt.all();
         const rows = results.results as Array<{
           subject: string;
