@@ -1,55 +1,50 @@
 # Skill Catalog
 
-Example skills you can create for your system. Each is a repeatable procedure Claude executes when triggered.
+Skills are repeatable procedures Claude runs when a trigger phrase or context
+matches. Claude Code discovers them in **`.claude/skills/<name>/SKILL.md`** — that's
+where the setup step copies them. (A bare `skills/` directory at the repo root is
+*not* auto-discovered by Claude Code.)
 
-## Built-in (included in blueprint)
+## Included in the blueprint
 
 | Skill | Purpose | Trigger |
 |-------|---------|---------|
-| git-memory | Bootstrap context from repo | Automatic at conversation start |
+| git-memory | Load context from the repo, write changes back | On demand; "pull memory"; before status claims |
 | status-check | Cross-domain status report | "status check", "brief me", "catch me up" |
-| weekly-backup | Diagnostic + chat archive | Auto (7-day gap) or "diagnostic", "backup" |
+| weekly-backup | Repo self-diagnostic | "diagnostic", "backup", "self-check" |
+| example-skill | Scaffold for building your own | (copy it to start a new skill) |
 
-## Common custom skills
+All four are git-only — they work in Claude Code with no token and no external tools.
 
-### Meeting Processing
-**meeting-prep** — Gather context before a meeting: recent discussions with participants, related documents, open tasks, project status. Trigger: "prep for meeting with [name]"
+## Common custom skills (ideas to build)
 
-**meeting-actions** — Extract action items, decisions, and follow-ups from meeting transcripts. Create reminders, update hubs. Trigger: "process last meeting", "extract actions"
+### Meetings
+- **meeting-prep** — gather context before a meeting: recent discussion, related
+  docs, open tasks. Trigger: "prep for meeting with [name]".
+- **meeting-actions** — extract decisions and follow-ups from notes; update hubs.
 
-### Work Domain
-**experiment-spec** — Generate structured specs for A/B tests, rollouts, config changes. Trigger: "write a spec for...", "experiment design"
-
-**weekly-review** — Summarize the week: what was done, what's blocked, what's next. Trigger: "weekly review", Friday afternoon
-
-**project-tracker** — Check external project status (GitHub, Sentry, deployment). Trigger: "check [project] status"
+### Work
+- **experiment-spec** — structured specs for A/B tests, rollouts, config changes.
+- **weekly-review** — summarize the week: done, blocked, next.
 
 ### Personal
-**health-tracker** — Log symptoms, medications, appointments. Cross-reference with hub file. Trigger: "log [symptom]", "[pet name] health update"
-
-**language-teacher** — Switch to target language, provide corrections inline, roleplay scenarios. Trigger: writing in the target language or "lesson"
-
-**travel-planner** — Research destination, build itinerary, track bookings. Trigger: "plan trip to [destination]"
-
-**finance-review** — Check budgets, track expenses against plan, flag anomalies. Trigger: "finance check", "budget review"
-
-### System
-**hub-sync** — Pull fresh data from external sources (Drive, Granola, etc.) into hub files. Trigger: "sync hubs", "refresh from Drive"
-
-**chat-archive** — Back up conversation history to archive/. Trigger: "archive chats", automatic via weekly-backup
+- **health-tracker** — log symptoms, meds, appointments against a hub.
+- **language-teacher** — switch to a target language, correct inline.
+- **travel-planner** — research, itinerary, bookings.
+- **finance-review** — budgets and expenses against plan.
 
 ## Creating your own skill
 
-1. Create a directory: `skills/[skill-name]/`
-2. Create `SKILL.md` with frontmatter (name, version, description with trigger phrases)
-3. Follow the template in `skills/example-skill/SKILL.md`
-4. Add to CLAUDE.md routing table if it maps to a hub
-5. Test by using a trigger phrase in conversation
+1. Create a directory: `.claude/skills/[skill-name]/` (Claude Code's discovery path).
+2. Add `SKILL.md` with frontmatter — a `name` and a `description` that includes the
+   trigger phrases (Claude matches on the description).
+3. Use `.claude/skills/example-skill/SKILL.md` as a scaffold.
+4. If the skill maps to a domain, add it to the CLAUDE.md routing table.
+5. Test by using a trigger phrase.
 
-### Skill design principles
-
-- **One skill, one job.** Don't combine meeting prep and meeting processing.
-- **Declare inputs and sources.** Where does the data come from? What if it's unavailable?
-- **Handle failures gracefully.** Missing MCP connector? Stale hub? Empty search results?
-- **Persist results.** If the skill changes state, commit to the repo.
-- **Keep it under 2K tokens.** Skills are loaded on-demand — bloated skills waste context.
+### Design principles
+- **One skill, one job.**
+- **Declare inputs and sources;** handle a missing one gracefully.
+- **Git-only first.** If a step needs a connected tool, give a repo-native fallback.
+- **Persist results** with a commit if the skill changed state.
+- **Keep it under ~2K tokens** — skills load on demand.

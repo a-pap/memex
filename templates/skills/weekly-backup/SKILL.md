@@ -1,79 +1,58 @@
 ---
 name: weekly-backup
-version: "1.0"
 description: >
-  Self-diagnostic and chat backup. Run when: (1) 7+ days since last sync for
-  this surface, (2) user triggers manually with "diagnostic", "backup",
-  "self-check", "health check". Verifies system integrity, backs up recent
-  chats to archive, and pushes. Can run silently in background.
+  Self-diagnostic for the memory repo. Use on "diagnostic", "backup", "self-check",
+  "health check", or after a long gap. Verifies integrity and pushes. Git-only.
 ---
 
-# Weekly Backup & Diagnostic
+# Weekly Diagnostic
 
-## Auto-trigger conditions
+## When to run
 
-Run silently (no user trigger needed) when:
-1. **Weekly staleness** — 7+ days since last sync for current surface
-2. **Version upgrade** — new model/client detected
-3. **New surface** — first-ever sync from this surface type
+On request ("diagnostic", "backup", "self-check", "health check"), or when the repo
+hasn't been touched in a while.
 
-Manual triggers: "diagnostic", "backup", "self-check", "health check"
-
-## Step 1: Pull and diagnostic
+## Step 1: Pull and check
 
 ```bash
-cd /home/claude/claude-memory && git pull --ff-only
+git pull --ff-only
 ```
 
-### Non-regression checklist
+### Integrity checklist (git-only)
 
-1. ✅ All files referenced in CLAUDE.md exist
-2. ✅ Memory edit count in git matches live system (`memory_user_edits(command="view")`)
-3. ✅ Hub file count matches registry in `hubs/README.md`
-4. ✅ No duplicate facts across hubs (spot-check 3 random facts)
-5. ✅ STATUS_SNAPSHOT under ~60 lines
-6. ✅ Startup token budget under 8K (CLAUDE.md + STATUS_SNAPSHOT)
-7. ✅ No secrets in committed files (grep for common patterns)
+1. Every file in CLAUDE.md's routing table exists (or is a clearly-marked CUSTOMIZE placeholder).
+2. Hub count matches `hubs/README.md`.
+3. No duplicate facts across hubs (spot-check a few).
+4. STATUS_SNAPSHOT under ~50 lines.
+5. No secrets in tracked files.
 
 ```bash
-# Quick integrity checks
-wc -l STATUS_SNAPSHOT.md  # should be < 60
-ls hubs/*.md | wc -l       # should match registry
-grep -r "ghp_\|sk-\|password" hubs/ config/ --include="*.md" | head -5  # should be empty
+wc -l STATUS_SNAPSHOT.md                                  # under ~50
+ls hubs/*.md | wc -l                                      # matches the registry
+grep -rInE 'ghp_|gho_|github_pat_|cfut_|grn_|sk-' . \
+  --include='*.md' | grep -v templates/ | head            # should be empty
 ```
 
-## Step 2: Backup recent chats
-
-```
-recent_chats: n=20, sort_order="desc"
-```
-
-For each chat: extract title, date, topic summary. Append to `archive/chat_index.md`.
-
-## Step 3: Check for stale hubs
+## Step 2: Flag stale hubs
 
 ```bash
-# Check git log for each hub
 for f in hubs/*.md; do
-  echo "$f: $(git log -1 --format='%ai' -- "$f")"
+  echo "$f: $(git log -1 --format='%cr' -- "$f")"
 done
 ```
+Flag any hub older than ~14 days.
 
-Flag any hub not updated in >14 days.
-
-## Step 4: Push results
+## Step 3: Push
 
 ```bash
 git add -A
-git commit -m "sync: weekly diagnostic + backup [surface]"
+git commit -m "sync: weekly diagnostic"
 git push
 ```
 
-## Step 5: Report (brief)
+## Step 4: Report (brief)
 
-If running silently alongside user's task, report at conversation end:
-```
-Background diagnostic: all OK. [N] chats archived. [Any stale hubs flagged.]
-```
+"Diagnostic: all OK. [Any stale hubs flagged.]"
 
-If running manually, show full checklist results.
+(On claude.ai you can also archive recent chats via `recent_chats`; that tool does
+not exist in Claude Code.)

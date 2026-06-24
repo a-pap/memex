@@ -4,6 +4,8 @@ These are anonymized examples from a real Memex installation that has been runni
 
 All personal data has been replaced with fictional equivalents. The structure, format, and level of detail are authentic.
 
+These hubs show a *lived-in* style — free-form sections that grew over months. The canonical starting skeleton is tighter: **Current Status → Open Gaps → Changelog**, defined in [templates/hubs/01_example_hub.md](../templates/hubs/01_example_hub.md). Start from that template; your hubs drift toward this looser shape as they mature.
+
 ## Files
 
 | File | Shows |

@@ -2,6 +2,46 @@
 
 All notable changes to the Memex blueprint.
 
+## 2026-06-24 — v2.5: git-only out-of-the-box for Claude Code
+
+Audited and fixed the entire setup, template, and skill layer so a fork works in
+Claude Code with **zero dependencies beyond a free GitHub account** — no Cloudflare,
+no MCP worker, no access token in any file, no paid tier. The optional MCP worker is
+now cleanly separated as an advanced, later step.
+
+### Fixed (security)
+
+- **Removed the "put your PAT in a committed file" pattern** everywhere it appeared
+  (QUICKSTART, SETUP, START_HERE, ONBOARDING, FIRST_TIME_PROMPT, `templates/CLAUDE.md`,
+  `templates/memory/MEMORY_EDITS.md`, `templates/RULES.md`, examples). For Claude Code,
+  local git auth handles pushes — no token belongs in the repo, and git history is
+  permanent. Any token is now confined to the optional claude.ai path, where it lives
+  in claude.ai settings, never in a tracked file.
+- Genericized a personal-data reference in the maintainer guide.
+
+### Fixed (out-of-the-box correctness)
+
+- **Skills now install where Claude Code finds them** — `.claude/skills/`, not a bare
+  `skills/` directory (which is never auto-discovered). Updated every setup doc and
+  `SKILL_CATALOG.md`.
+- **Removed claude.ai sandbox paths** (`/home/claude/...`) from the Claude Code path in
+  templates, skills, and configs — the repo is the working directory.
+- **Fenced claude.ai-only tools** (`conversation_search`, `memory_user_edits`,
+  `recent_chats`, `event_search_v0`, `reminder_search_v0`) behind clear "(claude.ai
+  only)" labels with git-native alternatives, so a Claude Code session never reaches
+  for a tool it doesn't have.
+- **Fixed the routing table → missing hubs problem** — the table is now a clearly
+  marked CUSTOMIZE placeholder that references the one hub the blueprint ships.
+- **BOOTSTRAP restores git-only** — read `CLAUDE.md` → `STATUS_SNAPSHOT.md` → `RULES.md`,
+  with the chat-only memory-edit replay fenced as optional.
+- Corrected the Claude Code link and the optional worker's tool count (26).
+
+### Verified
+
+Replicated the CI gates and ran a fresh simulated install (copy templates → skills to
+`.claude/skills/` → inspect): root files present, skills auto-discoverable, no token or
+sandbox path anywhere, links resolve, no personal identifiers.
+
 ## 2026-06-24 — v2.4: the memory architecture, distilled
 
 The first big content update since the public release. Repositions Memex around the

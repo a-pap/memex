@@ -172,7 +172,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for design rationale and token economics,
 ## Get started
 
 Memex needs nothing but a git repo and the model you already use. Open
-[Claude Code](https://claude.ai/code) (it runs the commands for you) or
+[Claude Code](https://code.claude.com) (it runs the commands for you) or
 [claude.ai](https://claude.ai) and paste:
 
 > Help me set up Memex from scratch. Read

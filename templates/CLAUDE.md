@@ -1,55 +1,57 @@
 # CLAUDE.md — Shared Memory
 
-Persistent context for all Claude surfaces. This repo is the **single source of truth**.
-Works standalone — no Google Drive, no MCP connectors required. Both are optional enrichments.
+Persistent context for Claude. This repo is the **single source of truth**. It works
+with nothing but git — no access token in any file, no MCP connector, no external
+service. Those are optional enrichments, never requirements.
 
 ## Pre-flight check (MANDATORY)
 
 Before ANY assertion about ongoing topics:
-1. Read `STATUS_SNAPSHOT.md` (if not already in context)
-2. Read relevant hub file from `hubs/`
-3. If `conversation_search` available → cross-check (hubs lag 1-7 days)
-4. When uncertain → "let me check", never guess
+1. Read `STATUS_SNAPSHOT.md` (if not already in context).
+2. Read the relevant hub from `hubs/` (routing table below).
+3. Check freshness: `git log -1 --format=%cd -- <hub>` — hubs can lag a few days.
+4. Uncertain → "let me check", never guess.
 
 ## Route by topic
 
-<!-- CUSTOMIZE: Replace with your domains and hub files -->
+<!-- CUSTOMIZE: replace these rows with your own domains. Each hub is a file you
+     create in hubs/ by copying hubs/01_example_hub.md. Delete unused rows.
+     Only hubs/01_example_hub.md ships by default — the rest are yours to create. -->
 
-| Topic | Hub | Skill |
-|-------|-----|-------|
-| Work, projects | hubs/01_work.md | — |
-| Health | hubs/02_health.md | — |
-| Side project | hubs/03_side_project.md | — |
-| Major life event | hubs/04_life_event.md | — |
-| Learning | hubs/05_learning.md | — |
-| Personal profile | hubs/06_personal.md | — |
-| Cross-domain status | STATUS_SNAPSHOT.md | status-check |
+| Topic | Hub |
+|-------|-----|
+| Work, projects | hubs/01_work.md |
+| Health | hubs/02_health.md |
+| Side project | hubs/03_side_project.md |
+| Learning | hubs/04_learning.md |
+| Personal profile | hubs/05_personal.md |
+| Cross-domain status | STATUS_SNAPSHOT.md |
 
 ## Repo structure
 
 ```
-STATUS_SNAPSHOT.md       # Cross-domain status (~50 lines, read first)  [~3K tokens]
-CLAUDE.md                # This file — routing and rules                [~1.5K tokens]
-BOOTSTRAP.md             # Full memory restoration after wipe           [on-demand]
-RULES.md                 # Behavioral rules, failure patterns           [on-demand]
-hubs/                    # Domain hub files                             [on-demand]
-skills/                  # Repeatable procedures                        [on-demand]
-config/                  # Projects, connectors, sync protocol          [on-demand]
-references/              # Deep research artifacts                      [on-demand]
-memory/                  # Memory edits + preferences snapshots         [on-demand]
-archive/                 # Chat history backups                         [on-demand]
+STATUS_SNAPSHOT.md   # Cross-domain status (~50 lines) — read first
+CLAUDE.md            # This file — routing and rules
+BOOTSTRAP.md         # Full restoration after a wipe
+RULES.md             # Behavioral rules, failure patterns
+hubs/                # Domain hub files (on-demand)
+.claude/skills/      # Optional procedures Claude Code auto-discovers
+memory/              # Optional: behavioral notes for claude.ai (Code ignores)
+config/, references/ # Optional: projects, connectors, deep research
+archive/             # Optional: history backups
 ```
 
-**Startup token budget: ~5K tokens** (CLAUDE.md + STATUS_SNAPSHOT). Everything else loads on-demand. If total exceeds 8K, prune STATUS_SNAPSHOT first.
+**Startup cost** is just this file + STATUS_SNAPSHOT (a few thousand tokens).
+Everything else loads on demand. If STATUS_SNAPSHOT grows past ~50 lines, prune it.
 
 ## Key rules
 
 1. **Read before acting.** STATUS_SNAPSHOT → hub → answer.
-2. **One canonical home.** Facts live in ONE hub. Others reference, not duplicate.
-3. **Absolute dates only.** "Thursday" → "2026-04-03". Relative dates rot within days.
-4. **Don't store derivable.** If computable from existing data, don't write it down.
-5. **Commit after changes.** `git add -A && git commit -m "update: [domain] — [what]" && git push`
-6. **Never commit secrets.** No tokens, passwords, API keys in hub content.
+2. **One canonical home.** Each fact lives in ONE hub; others reference it.
+3. **Absolute dates only.** "Thursday" → "2026-04-03". Relative dates rot.
+4. **Don't store the derivable.** If it's computable from existing data, don't write it.
+5. **Commit after changes.** `git add -A && git commit -m "update: [domain] — [what]" && git push` — uses your local git auth.
+6. **Never commit secrets.** No tokens, passwords, or API keys in any file — including this one. Git history is permanent.
 
 ## Freshness decay model
 
@@ -62,47 +64,37 @@ archive/                 # Chat history backups                         [on-dema
 
 ## Memory hierarchy (trust order)
 
-1. Current conversation (freshest)
-2. This repo hub files (committed, verified) — PRIMARY for **facts**
-3. External tools (Google Drive, Granola, Calendar — optional enrichment)
-4. `userMemories` snapshot (auto-generated, may lag weeks)
-
-**Memory edits** and **userPreferences** govern Claude's **behavior**. Hub files govern **reality**. Never overwrite a hub fact based on a behavioral instruction.
+1. Current conversation (freshest).
+2. Repo hub files (committed, verified) — PRIMARY for facts.
+3. External tools (Drive, Granola, Calendar — optional enrichment, if connected).
 
 ## Surface-specific behavior
 
-### Claude Chat (web/mobile)
-```bash
-# Clone or pull
-if [ -d /home/claude/claude-memory/.git ]; then
-  cd /home/claude/claude-memory && git pull --ff-only
-else
-  git clone https://TOKEN@github.com/USER/claude-memory.git /home/claude/claude-memory
-  cd /home/claude/claude-memory
-fi
-```
-Git author: `Claude (Chat)`
+### Claude Code (CLI) — the default, git-only
 
-### Claude Code (CLI)
-- Repo IS your project root — all files are local
-- At session start: `git pull` → check what changed
-- Git author: `Claude (Code)`
+- The repo IS your project root; all files are local.
+- Session start: `git pull` to see what changed.
+- Write changes: edit the file, then `git add -A && git commit && git push`.
+- No access token anywhere — your local git auth handles pushes.
+- Git author: `Claude (Code)`.
 
-### Cowork (scheduled tasks)
-- Git author: `Claude (Cowork)`
+### Claude.ai chat / mobile — optional
+
+Chat has no persistent local clone and a different tool set (`conversation_search`,
+`memory_user_edits`, `recent_chats` — none of which exist in Claude Code). To use
+the repo from chat, deploy the optional MCP worker (see `SETUP_MCP.md`) or clone
+per session. If you clone in chat, the access token lives in claude.ai's settings —
+**never in a repo file**.
 
 ## Optional enrichments
 
-These tools improve freshness but are NOT required:
-- **Google Drive** → meeting transcripts, latest doc edits
-- **Granola** → meeting data
-- **Calendar / Reminders** → schedule context
+Use if connected; skip if not. Never error on a missing tool.
+- **Google Drive / Granola** — meeting notes, document edits.
+- **Calendar / Reminders** — schedule context.
 
-If any tool is unavailable: proceed with repo data alone. Never error on missing tools.
+## On-demand reading
 
-## On-demand references
-
-Load ONLY when the topic comes up:
-- @RULES.md — failure patterns, behavioral nudges
-- @references/ — deep research artifacts
-- @config/SYNC_PROTOCOL.md — sync mechanics
+Load only when the topic comes up (no auto-import — keep startup small):
+- `RULES.md` — failure patterns, behavioral nudges.
+- `references/` — deep research artifacts (read specific files).
+- `config/SYNC_PROTOCOL.md` — sync mechanics, if present.

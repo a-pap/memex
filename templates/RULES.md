@@ -8,12 +8,12 @@ Each pattern: Rule → Why → How to apply.
 ### 1. Asserting stale status
 **Rule:** Never say "X hasn't happened" without checking.
 **Why:** User may act on Claude's statements without verifying. Confident wrong answer = real cost.
-**How:** If unsure → "let me verify" → git pull + STATUS_SNAPSHOT or conversation_search. State data source and freshness date.
+**How:** If unsure → "let me verify" → git pull + read STATUS_SNAPSHOT (on claude.ai you can also use conversation_search). State data source and freshness date.
 
-### 2. Git clone without PAT
-**Rule:** Always use the full clone URL from memory edits with embedded token.
-**Why:** Repo is private. 404 = forgot token, not missing repo.
-**How:** Copy exact URL from memory edits. Never attempt bare `git clone github.com/...`
+### 2. Repo access (git-only)
+**Rule:** In Claude Code the repo is your working directory — use your local git auth; put no token in any file.
+**Why:** A token committed to the repo leaks (git history is permanent), and Code never needs one.
+**How:** `git pull` / `git push` directly. Only claude.ai chat (which clones per session) needs a token, and it lives in claude.ai settings — never in the repo.
 
 ### 3. Re-opening settled decisions
 **Rule:** Check STATUS_SNAPSHOT "Key decisions (SETTLED)" before suggesting alternatives.
@@ -33,12 +33,12 @@ Each pattern: Rule → Why → How to apply.
 ### 6. Non-regression on self-improvement
 **Rule:** Any session that modifies the memory system must verify it didn't break existing functionality.
 **How:** Before committing structural changes, check:
-1. All @imports in CLAUDE.md resolve to existing files
-2. Memory edit count in git = count in live system
-3. Hub file count unchanged (or intentionally changed)
-4. No new duplication (same fact in two canonical homes)
-5. STATUS_SNAPSHOT under ~60 lines
-6. Startup token budget under 8K
+1. Every file in CLAUDE.md's routing table exists (or is a marked CUSTOMIZE placeholder)
+2. Hub file count matches hubs/README.md (or changed intentionally)
+3. No new duplication (same fact in two canonical homes)
+4. STATUS_SNAPSHOT under ~50 lines
+5. Startup stays small (CLAUDE.md + STATUS_SNAPSHOT only)
+6. (claude.ai only) memory/MEMORY_EDITS.md matches the live memory
 
 ## Misinference check
 

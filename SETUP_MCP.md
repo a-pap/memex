@@ -1,12 +1,12 @@
 # Setup — Full Mode with MCP (15 minutes)
 
-Full mode adds a **Cloudflare Worker** that serves as an MCP server. Claude.ai connects to it directly via the MCP connector, giving you 22 tools for reading, writing, searching, and monitoring your memory.
+Full mode adds a **Cloudflare Worker** that serves as an MCP server. Claude.ai connects to it directly via the MCP connector, giving you 26 tools for reading, writing, searching, and monitoring your memory.
 
 **Prerequisites:** Complete [QUICKSTART.md](QUICKSTART.md) first. You need a working repo before adding MCP.
 
 ## What you get (on top of Lite)
 
-- **22 MCP tools** accessible from Claude.ai via the connector
+- **26 MCP tools** accessible from Claude.ai via the connector
 - **D1 database** for structured facts, session logs, error tracking, and a knowledge graph
 - **CI/CD** — push to main auto-deploys the worker
 - **Quality loop** — `health_check` + `todo_add` enable automated monitoring
@@ -94,7 +94,9 @@ In Claude.ai, start a new conversation and say: "Use wake_up to load my memory."
 
 Claude should call the `wake_up` tool and return your STATUS_SNAPSHOT, memory edits, available hubs, and recent facts.
 
-## Available tools (22)
+## Tools
+
+The core 22 are below; the full set of 26 (adds `memex_diff`, `diary_write`, `diary_read`, `get_tunnels`) is documented in [config/mcp-worker/README.md](config/mcp-worker/README.md).
 
 | Tool | Description |
 |------|-------------|

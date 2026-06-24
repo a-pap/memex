@@ -1,18 +1,13 @@
 # First-Time Setup Prompt
 
-Copy everything below the line into a new Claude conversation. Replace `<CLONE_URL>` with your actual URL.
-
-If you haven't yet: create a **private** GitHub repo, generate a Personal Access Token (Settings → Developer Settings → Tokens (classic) → scope: `repo`), and construct your clone URL: `https://<TOKEN>@github.com/<username>/claude-memory.git`
+Paste everything below the line into Claude Code (recommended) or claude.ai. The
+default setup needs only a free GitHub account — no token, no other service.
 
 ---
 
-I want to set up a persistent memory system based on the Memex blueprint.
+I want to set up persistent memory using Memex, starting from nothing. Read the
+setup guide and walk me through it step by step:
 
-Clone the blueprint and my private repo, then run the onboarding:
+https://github.com/a-pap/memex/blob/main/START_HERE.md
 
-```bash
-git clone https://github.com/a-pap/memex.git /home/claude/memex-blueprint
-git clone <CLONE_URL> /home/claude/claude-memory
-```
-
-Read `/home/claude/memex-blueprint/ONBOARDING.md` and follow it exactly.
+I'm in [Claude Code / claude.ai chat]. My GitHub username is [username].

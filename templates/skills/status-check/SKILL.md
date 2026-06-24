@@ -1,80 +1,55 @@
 ---
 name: status-check
-version: "1.0"
 description: >
-  Quick status across all domains. Use when user says "status check",
-  "what's going on", "brief me", "catch me up", "morning briefing",
-  or any variation of requesting a current overview.
+  Quick status across all domains. Use on "status check", "what's going on",
+  "brief me", "catch me up", "morning briefing", or any request for a current
+  overview. Git-only — reads the repo; calendar/reminder data is optional.
 ---
 
 # Status Check
 
-Produces a concise cross-domain status report from all available data sources.
+A concise cross-domain status report from the repo, plus any connected tools.
 
 ## Principle: fresh data, zero fluff
 
-Don't summarize what the user already knows. Surface what changed, what's due soon, and what needs attention.
+Surface what changed, what's due soon, and what needs attention. Don't restate what
+the user already knows.
 
 ## Step 1: Gather data
 
-Pull everything available. Skip silently if unavailable.
-
-### 1.1 GitHub repo
+### 1.1 The repo (always available)
 ```bash
-cd /home/claude/claude-memory && git pull
+git pull --ff-only 2>/dev/null
 cat STATUS_SNAPSHOT.md
 ```
-If STATUS_SNAPSHOT is stale (>3 days), load relevant hub files.
-If no bash: use recent_chats + conversation_search + userMemories.
+If STATUS_SNAPSHOT looks stale (`git log -1 --format=%cr -- STATUS_SNAPSHOT.md`),
+read the relevant hub files for detail.
 
-### 1.2 Recent chats
-```
-recent_chats: n=5, sort_order="desc"
-```
+### 1.2 Optional enrichment (claude.ai / connected tools only)
+If — and only if — calendar/reminder tools are connected, pull upcoming events and
+due items for the next 3 days. In Claude Code these tools are absent; rely on the
+"Upcoming deadlines" section of STATUS_SNAPSHOT instead.
 
-### 1.3 Calendar (next 3 days)
-```
-event_search_v0: startTime=[now], endTime=[now + 3 days]
-```
-
-### 1.4 Reminders (overdue + due soon)
-```
-reminder_search_v0: status="incomplete"
-```
-
-### 1.5 Other tools (Granola, Gmail — if available)
-
-## Step 2: Build report
+## Step 2: Build the report
 
 ```markdown
 # Status — [Date]
 
-## 🔴 Needs attention
-[Overdue, blocked, or needs a decision TODAY]
+## Needs attention
+[Overdue, blocked, or needs a decision today]
 
-## 📅 Coming up (3 days)
-[Calendar + due reminders, chronological]
+## Coming up
+[Deadlines from STATUS_SNAPSHOT + any connected calendar, chronological]
 
-## [Domain 1]
-[Status, blockers, next action]
-
-## [Domain 2]
-[Status, blockers, next action]
+## [Domain]
+[Status, blocker, next action]
 ```
 
-### What NOT to include
-- Domains with nothing active or changed — skip the section
-- Platitudes ("everything's on track") — skip
-- Past decisions unless they create current actions
-- Stale info presented as current — note freshness
+Skip domains with nothing active. Skip platitudes. Note any stale data.
 
 ## Step 3: Flag staleness
 
+```bash
+git log -1 --format='%cr' -- hubs/01_example_hub.md
 ```
-⚠️ [Domain] hub hasn't been updated in [N] days. Data may be inaccurate.
-```
-
-If repo is >7 days behind:
-```
-💡 Hubs are [N] days stale. Run "sync hubs"?
-```
+If a hub is more than ~7 days old, say so: "⚠️ [domain] hub last updated [N] days ago."

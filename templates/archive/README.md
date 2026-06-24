@@ -4,7 +4,7 @@ Chat history backups and deprecated content.
 
 ## Structure
 
-- `chat_index.md` — Index of past conversations (auto-populated by weekly-backup skill)
+- `chat_index.md` — Optional index of past conversations (populate manually, or via a custom skill on claude.ai where chat history is available)
 - `HANDOFF_*.md` — Session handoff notes (created during major transitions)
 
 ## Retention

@@ -8,7 +8,7 @@ Open-source blueprint of the multi-surface Claude memory system. Synced **one-wa
 
 ## Hard rules (зачем CLAUDE.md в этом репо)
 
-1. **Никогда не писать сюда персональные данные.** Не имена, не логины, не клиники, не суммы, не Барселону, не Jay, не PassLocal-конкретику. Single-source-of-truth — `claude-memory/`. Сюда только pattern-level generic.
+1. **Никогда не писать сюда персональные данные.** Не имена, не логины, не клиники, не суммы, не локации, не клички питомцев, не названия личных проектов. Single-source-of-truth — `claude-memory/`. Сюда только pattern-level generic.
 2. **Никаких секретов** (`cfut_`/`ghp_`/`grn_`/`sk-`/long hex). Pre-commit hook режет, но контроль на уровне рук.
 3. **Не запускать sync-скрипты напрямую** — sync делается из `~/GitHub/claude-memory` через `config/memex-sync.sh`. Тут только проверка результата и публикация.
 4. **Если в этом репо появился personal-leak** — это инцидент уровня RULES.md §10 (см. claude-memory/RULES.md). Откатить, postmortem в SECURITY.md, добавить regex в guard.

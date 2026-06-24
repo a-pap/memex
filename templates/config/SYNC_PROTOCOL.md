@@ -1,39 +1,36 @@
 # Sync Protocol
 
-## Architecture
-
-GitHub repo is PRIMARY. All other sources (Drive, Granola, etc.) are optional enrichments.
-The system works fully without any external tools.
+GitHub repo is PRIMARY. Other sources (Drive, Granola, …) are optional enrichments.
+The system works fully without any external tool.
 
 ## Repo operations
 
-After any significant change in conversation:
+After any significant change:
+
 ```bash
-cd /home/claude/claude-memory && git pull --ff-only
-# Edit relevant files
+git pull --ff-only
+# edit the relevant files
 git add -A && git commit -m "update: [domain] — [what]" && git push
 ```
 
-Git author by surface:
-- Chat: `Claude (Chat)` or `Claude (Chat [Project])`
-- Code: `Claude (Code)`
-- Cowork: `Claude (Cowork)`
-
-## Memory edits sync
-
-`memory/MEMORY_EDITS.md` mirrors `memory_user_edits` from Claude Chat.
-- After `memory_user_edits(add/replace/remove)` → update file → push
-- If discrepancy found → call `memory_user_edits` to align
+In Claude Code the repo is your working directory and pushes use your local git
+auth — no token in any file. Git author by surface: `Claude (Code)`, `Claude (Chat)`.
 
 ## Trigger phrases
 
 | Phrase | Action |
 |--------|--------|
 | "sync" / "update repo" | git pull → update stale files → push |
-| "hub refresh" | Pull from all sources → update hubs → push |
-| "status check" | Read STATUS_SNAPSHOT + recent context → report |
-| "remember [X]" | memory_user_edits + update memory/ → push |
+| "hub refresh" | pull from sources → update hubs → push |
+| "status check" | read STATUS_SNAPSHOT + recent context → report |
+| "remember [X]" | append to the relevant hub (or `memory/MEMORY_EDITS.md`) → push |
+
+## claude.ai memory (optional)
+
+`memory/MEMORY_EDITS.md` mirrors claude.ai's memory feature — chat only. Keep it in
+sync there via Settings → Memory or "remember …". Claude Code ignores it.
 
 ## What NOT to commit
 
-API keys, tokens, passwords. Full transcripts (live in source tools). Temp artifacts.
+Tokens, API keys, passwords. Full transcripts (they live in source tools). Temp
+artifacts. Git history is permanent — keep secrets out from the start.
