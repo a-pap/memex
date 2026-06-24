@@ -2,7 +2,7 @@
 
 ## Why Git?
 
-Claude's built-in memory (`userMemories`) is auto-generated, unstructured, and laggy — it can take days to reflect recent conversations and there's no way to edit it precisely. Memory edits help but are limited to behavioral instructions (14 items, ~500 chars each).
+Claude's built-in memory is auto-generated, unstructured, and laggy — it synthesizes a summary of you across conversations and refreshes on its own schedule, with no way to edit individual facts precisely. It is useful for behavioral continuity, not for the structured, authoritative factual record you actually need.
 
 A Git repo solves this:
 - **Structured**: organized files vs. a blob of text
@@ -127,7 +127,7 @@ Real measurements from a production Memex installation (9 domain hubs, 6+ months
 
 Most memory systems load everything into context on every conversation — 40K-50K+ tokens of history, embeddings, and metadata. This causes:
 - **Token waste** — paying for irrelevant context on every API call
-- **Context rot** — the more irrelevant text in the window, the worse Claude's responses become ([Anthropic docs](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching))
+- **Context rot** — model accuracy degrades as input grows, by position ([Liu et al., *Lost in the Middle*, 2023](https://aclanthology.org/2024.tacl-1.9/)) and independently by length ([Chroma, *Context Rot*, 2025](https://www.trychroma.com/research/context-rot))
 - **Slower responses** — more input tokens = higher latency
 
 Memex's graduated loading means a typical session uses **5-7K tokens** of memory context — ~10% of what a dump-everything approach would use.

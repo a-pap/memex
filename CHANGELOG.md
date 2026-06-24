@@ -2,6 +2,42 @@
 
 All notable changes to the Memex blueprint.
 
+## 2026-06-24 — v2.4: the memory architecture, distilled
+
+The first big content update since the public release. Repositions Memex around the
+*memory device itself* — curated retrieval over a git repo — and sets the optional
+MCP worker aside as an advanced, later step. Adds a flagship essay making the design
+argument, fact-checked against primary sources and pressure-tested through several
+expert review lenses (retrieval/IR, agent-memory, security, and editorial).
+
+### Added
+
+- **`GIT_AS_RAG.md`** — flagship essay: *"Git as RAG — Curated Retrieval as Long-Term
+  Memory for AI Agents."* The case for a curated git repo over a vector database for
+  personal/agent memory — routing table + graduated loading + write-side discipline —
+  with honest trade-offs and prior-art positioning (MemGPT/Letta, Generative Agents,
+  Zep/Graphiti, A-MEM, mem0, LangMem, Basic Memory). Every external claim is cited to
+  a primary source.
+
+### Changed
+
+- **README** — repositioned around the git-only memory architecture as the default
+  path. The optional Cloudflare/MCP worker is now a clearly-marked "advanced, later"
+  section instead of the lead. Removed a duplicated "What it looks like" block,
+  reframed the comparison table around curated-vs-vector retrieval, and added a
+  "what not to store" pointer before first use.
+
+### Fixed
+
+- **Removed an unverified claim** that Claude's memory edits are "limited to 14 items,
+  ~500 chars each" — no such limit appears in any Anthropic documentation (the official
+  support page states no numeric limits). Replaced with the documented behavior.
+- **Corrected the "context rot" citation** in `ARCHITECTURE.md` from an unrelated
+  Anthropic prompt-caching page to the actual sources (Chroma, *Context Rot*, 2025;
+  Liu et al., *Lost in the Middle*, 2023).
+- **Reconciled the MCP tool count** — the README no longer disagrees with itself
+  (26 vs. 22) about the worker's tool surface.
+
 ## 2026-04-10 — v2.3: quality loop + annotations + hooks + security scrub
 
 Four new MCP tools, annotation metadata on every tool, a Claude Code SessionEnd
