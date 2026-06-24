@@ -222,7 +222,12 @@ async function checkContradictions(db: D1Database, content: string): Promise<str
       for (const row of rows.results as Array<{ subject: string; predicate: string; object: string }>) {
         warnings.push(`KG: ${row.subject} → ${row.predicate} → ${row.object}`);
       }
-    } catch { /* skip */ }
+    } catch (e) {
+      // Don't crash the contradiction check on a single entity's DB failure,
+      // but make the failure observable (logs/monitoring) instead of swallowing it.
+      console.error(`checkContradictions: KG lookup failed for entity "${entity}":`, e);
+      warnings.push(`KG lookup failed for "${entity}" (see logs)`);
+    }
   }
   return [...new Set(warnings)];
 }
