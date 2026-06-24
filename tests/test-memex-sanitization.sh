@@ -11,8 +11,19 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SYNC="$REPO_ROOT/config/memex-sync.sh"
 
+# Skip gracefully when the sanitizer is absent. config/memex-sync.sh lives only
+# in the private source repo and is intentionally NOT mirrored into the public
+# repo: its strip patterns ARE the personal identifiers it removes, so shipping
+# it would leak them (and the residual-check gate would refuse it). With no
+# sanitizer present there is nothing to exercise here, so skip cleanly; the full
+# regression battery runs in the private source repo where the sanitizer exists.
+# This mirrors how config/hooks/pre-commit.sh skips tests/run-all.sh when that
+# file is absent in the public mirror.
+if [ ! -f "$SYNC" ]; then
+  echo "SKIP: sanitizer $SYNC not present — it is private-only and intentionally not mirrored to the public repo; no sanitization rules to exercise here."
+  exit 0
+fi
 [ -x "$SYNC" ] || chmod +x "$SYNC" 2>/dev/null || true
-[ -f "$SYNC" ] || { echo "FAIL: missing $SYNC"; exit 1; }
 
 PASSED=0
 FAILED=0
