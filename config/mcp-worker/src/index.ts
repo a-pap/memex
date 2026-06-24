@@ -1264,15 +1264,22 @@ export default {
       });
     }
 
+    // Auth must fail CLOSED: if no token is configured, reject rather than
+    // letting every /mcp request through unauthenticated.
+    if (!env.AUTH_PATH_TOKEN) {
+      return new Response(
+        JSON.stringify({ error: "server misconfigured: AUTH_PATH_TOKEN not set" }),
+        { status: 503, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // If /mcp/{token} — validate token
-    if (env.AUTH_PATH_TOKEN) {
-      const match = path.match(/^\/mcp\/(.+)$/);
-      if (match && match[1] !== env.AUTH_PATH_TOKEN) {
-        return new Response(JSON.stringify({ error: "unauthorized" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+    const match = path.match(/^\/mcp\/(.+)$/);
+    if (match && match[1] !== env.AUTH_PATH_TOKEN) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Initialize D1 tables on first request (idempotent)

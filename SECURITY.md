@@ -74,7 +74,7 @@ Connector URL: https://your-worker.your-subdomain.workers.dev/mcp
 Authorization: Bearer <your-token>
 ```
 
-Without `AUTH_PATH_TOKEN` set, the `/mcp` endpoint is open — anyone who knows the URL can call your tools. **Always set `AUTH_PATH_TOKEN` in production.**
+`AUTH_PATH_TOKEN` is **required**. The Worker fails closed: if the secret is not set, every `/mcp` request is rejected with `503 server misconfigured` rather than being served unauthenticated. Set `AUTH_PATH_TOKEN` before the endpoint will serve any tool calls.
 
 ### Cloudflare Worker secrets
 

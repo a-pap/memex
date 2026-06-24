@@ -99,7 +99,7 @@ Set via `wrangler secret put` or GitHub Actions:
 | Secret | Purpose |
 |--------|---------|
 | `GITHUB_PAT` | GitHub Personal Access Token (Contents read/write) |
-| `AUTH_PATH_TOKEN` | Optional token checked in the `/mcp/<token>` URL path |
+| `AUTH_PATH_TOKEN` | Required token checked in the `/mcp/<token>` URL path. If unset, the Worker fails closed (every `/mcp` request returns 503). |
 
 `GITHUB_REPO` is a *var*, not a secret — set it in `wrangler.toml` under `[vars]` to `owner/repo`.
 
