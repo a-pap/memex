@@ -80,14 +80,18 @@ git push
 **That's the whole git-only setup.** Skip to Step 4 unless the user explicitly wants
 claude.ai chat or mobile to share this memory (Step 3).
 
-### Step 3. Optional — share the memory with claude.ai chat / mobile
+### Step 3. Optional — use the memory in claude.ai chat & Projects
 
-Both optional:
-- **Behavioral memory only (no infra):** generate 3–4 short behavioral notes (name,
-  pre-flight, trust) and tell the user to paste them into claude.ai → Settings →
-  Memory. Mirror them as plain text in `memory/MEMORY_EDITS.md` — **no token, ever.**
-- **MCP worker (full cross-surface, advanced):** deploy a free Cloudflare Worker so
-  chat/mobile read the repo as tools with no git. Follow `SETUP_MCP.md`.
+- **Read it in chat/Projects (token-free, recommended):** have the user connect
+  **Settings → Connectors → GitHub** (OAuth, no token, private repos OK). Then in a
+  chat they attach `STATUS_SNAPSHOT.md` + the relevant hub via ＋ → Add from GitHub, or
+  sync the repo into a Project for always-on context. Read-only — writing memory back
+  stays in Claude Code.
+- **Behavioral memory (no infra):** generate 3–4 short behavioral notes (name,
+  pre-flight, trust) for the user to paste into claude.ai → Settings → Memory. Mirror
+  them as plain text in `memory/MEMORY_EDITS.md` — **no token, ever.**
+- **MCP worker (write-automation, advanced):** only if they want chat/mobile to
+  *commit* memory or run scheduled jobs — a free Cloudflare Worker. Follow `SETUP_MCP.md`.
 
 ### Step 4. Wrap up
 

@@ -2,6 +2,23 @@
 
 All notable changes to the Memex blueprint.
 
+## 2026-06-24 — v2.6: read your memory in Claude chat & Projects (token-free)
+
+Documented the native **GitHub connector** path so the memory repo works in claude.ai
+chat and Projects, not just Claude Code — with no MCP worker and no token. Connect the
+repo under Settings → Connectors → GitHub (OAuth), then attach `STATUS_SNAPSHOT.md` +
+the relevant hub in a chat, or sync the repo into a Project. This path is **read-only**
+(verified against Anthropic's docs); writes (commits/branches/PRs) still go through
+Claude Code or the optional worker. Net model: **read anywhere, write in Code.**
+
+### Changed
+- README, QUICKSTART, START_HERE, ARCHITECTURE, `templates/CLAUDE.md`, BOOTSTRAP —
+  added the chat/Projects read path; corrected the cross-surface example (read in chat
+  / write in Code) and the architecture-diagram edges; updated the file tree to
+  `.claude/skills/`.
+- `SETUP_MCP.md` — repositioned the worker as **write-automation only** (reads are now
+  native via the connector), with a "do you need this?" callout up top.
+
 ## 2026-06-24 — v2.5: git-only out-of-the-box for Claude Code
 
 Audited and fixed the entire setup, template, and skill layer so a fork works in

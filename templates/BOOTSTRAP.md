@@ -15,9 +15,13 @@ The repo IS the memory. There is nothing external to restore.
 Then confirm to the user: the STATUS_SNAPSHOT date and any overdue items. Done —
 no tokens, no tools, no external services.
 
-## Claude.ai chat (optional) — also restore the memory layer
+## Claude.ai chat & Projects (optional)
 
-claude.ai has a behavioral "memory" separate from the repo. To restore it:
+To read your restored memory in claude.ai, connect the repo via the GitHub connector
+(Settings → Connectors → GitHub) — attach files in a chat, or sync it into a Project.
+No token needed; writes still go through Code.
+
+claude.ai also has a behavioral "memory" separate from the repo. To restore that:
 
 1. Paste `memory/USER_PREFERENCES.md` into Settings → Profile → User Preferences.
 2. Paste the items from `memory/MEMORY_EDITS.md` into claude.ai's memory, or tell

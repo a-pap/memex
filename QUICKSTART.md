@@ -77,12 +77,19 @@ something worth remembering and watch it update a hub and push the commit.
 
 That's the whole system. Everything below is optional.
 
+### 7. (Optional) Read it in Claude chat and Projects
+
+Same repo, one-time connect: **Settings → Connectors → GitHub** (OAuth, no token). In
+a chat, **＋ → Add from GitHub** and attach `STATUS_SNAPSHOT.md` + the relevant hub. In
+a Project, **sync** the repo as context. Reads are native and token-free; writing
+memory back still happens in Claude Code (or the optional worker).
+
 ## Next steps (all optional)
 
-- **claude.ai chat / mobile / automation** — deploy the MCP worker so non-Code
-  surfaces read the same repo without git: [SETUP_MCP.md](SETUP_MCP.md). This is the
-  only path that needs an access token, and even there the token lives in claude.ai
-  settings or a Cloudflare secret — never in the repo.
+- **Write from chat/mobile, or automate** — the optional MCP worker lets non-Code
+  surfaces *commit* memory and run scheduled jobs: [SETUP_MCP.md](SETUP_MCP.md).
+  (Reading in chat/Projects needs no worker — see step 7.) Any token it uses lives in
+  claude.ai settings or a Cloudflare secret — never in the repo.
 - **How it works** — [ARCHITECTURE.md](ARCHITECTURE.md) and the design essay
   [GIT_AS_RAG.md](GIT_AS_RAG.md).
 - **What not to store** — [SECURITY.md](SECURITY.md). Git history is permanent; keep

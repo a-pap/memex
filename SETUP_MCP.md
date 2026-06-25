@@ -2,6 +2,12 @@
 
 Full mode adds a **Cloudflare Worker** that serves as an MCP server. Claude.ai connects to it directly via the MCP connector, giving you 26 tools for reading, writing, searching, and monitoring your memory.
 
+> **Do you need this?** Reading your memory in claude.ai is already free via the
+> native **GitHub connector** — attach files in a chat, or sync a repo into a Project
+> (see the README). The worker is only for **writing** memory back from a non-git
+> surface (commit from chat or phone) or **scheduled automation**. If you just want
+> chat to *read* your memory, skip this whole guide.
+
 **Prerequisites:** Complete [QUICKSTART.md](QUICKSTART.md) first. You need a working repo before adding MCP.
 
 ## What you get (on top of Lite)

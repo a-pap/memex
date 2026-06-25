@@ -84,20 +84,19 @@ No re-explaining your life. No "can you remind me what you're working on?"
 </details>
 
 <details>
-<summary><strong>Cross-surface continuity — Chat → Code, context preserved</strong></summary>
+<summary><strong>Cross-surface continuity — read in chat, write in Code</strong></summary>
 
-Morning, on your phone:
-> "Decided to delay the overlay format to Q2 — auto-placement is the priority."
+Morning, in Claude chat (your memory repo connected via GitHub):
+> "Where did we land on the overlay format?"
 
-Claude commits the decision to `hubs/work.md` and marks it settled in
-`STATUS_SNAPSHOT.md`.
+Claude attaches `STATUS_SNAPSHOT.md` and the work hub and answers from your real
+memory — no re-explaining.
 
 Afternoon, in Claude Code on your laptop:
-> "What's the status on overlay?"
+> "Implement what we decided and update the hub."
 
-Claude reads the same repo:
-> "You moved overlay to Q2 this morning — auto-placement is the current priority.
-> Implementation kickoff is penciled for Apr 14."
+Claude reads the same repo, makes the change, and commits it back. Next time you
+open chat and attach the repo, the decision is already there.
 
 No copy-paste. No "as we discussed." The repo is the shared brain.
 </details>
@@ -136,9 +135,9 @@ graph TB
         bootstrap["BOOTSTRAP.md\nDisaster recovery"]
     end
 
-    chat -->|"git clone/pull"| repo
-    code -->|"local git"| repo
-    mobile -.->|"optional MCP worker"| repo
+    chat -->|"GitHub connector (read)"| repo
+    code -->|"local git (read + write)"| repo
+    mobile -.->|"optional MCP worker (write)"| repo
 
     routing -.->|"routes to"| hubs
     snapshot -.->|"covers 80%"| routing
@@ -160,7 +159,7 @@ Your Private Repo (source of truth)
 ├── BOOTSTRAP.md            # Disaster recovery — full restore from zero
 ├── RULES.md                # Behavioral patterns, failure modes
 ├── hubs/                   # Domain knowledge files (on-demand)
-├── skills/                 # Repeatable procedures (on-demand)
+├── .claude/skills/         # Repeatable procedures (Claude Code auto-discovers)
 ├── memory/                 # Behavioral rules + preferences snapshots
 ├── references/             # Deep research artifacts
 └── archive/                # History backups
@@ -201,19 +200,34 @@ Then customize:
 > is permanent — a curated memory is only as safe as your discipline about what
 > enters it.
 
-## Optional: multi-surface via an MCP worker (advanced)
+## Use it in Claude chat and Projects (token-free)
 
-The core system is git-only and works in Claude Code today. If you later want
-**zero-git surfaces** — claude.ai chat on the web or a phone, or scheduled
-automation — you can deploy an optional Cloudflare Worker that exposes the same repo
-over MCP (no git commands needed; one `wake_up` call loads everything). It adds D1
-for structured facts, session logs, and a knowledge graph.
+Your memory is a GitHub repo, so Claude.ai reads it natively — no worker, no token to
+paste. Connect **Settings → Connectors → GitHub** once (OAuth; works with private
+repos):
 
-This is a real piece of infrastructure with its own setup, secrets, and maintenance
-cost — **treat it as a later step, not part of the minimum.** The full tool
-reference and deploy guide live in
-[config/mcp-worker/README.md](config/mcp-worker/README.md) and
-[SETUP_MCP.md](SETUP_MCP.md).
+- **In a chat:** click **＋ → Add from GitHub** and attach `STATUS_SNAPSHOT.md` plus
+  the hub you're asking about. Claude answers from your real memory.
+- **In a Project:** **sync** your memory repo into the Project so every conversation
+  there has it as context. Click **Sync** to refresh (it snapshots file contents; the
+  repo must fit the context window).
+
+This path is **read-only** — the connector pulls files, it doesn't commit. To *write*
+memory back, use Claude Code (local, or Claude Code on the web, which pushes a branch /
+opens a PR) or the optional worker below. A simple rule: **read anywhere, write in
+Code.**
+
+## Optional: an MCP worker for write-automation (advanced)
+
+Reading your memory is already native everywhere (Code locally; chat and Projects via
+the GitHub connector above). You only need the worker to let Claude **write** memory
+back from a surface without git — commit from a plain chat or phone, or run scheduled
+jobs. It's a Cloudflare Worker that exposes the repo over MCP (one `wake_up` call loads
+everything) plus D1 for structured facts, session logs, and a knowledge graph.
+
+Real infrastructure with its own setup and secrets — **a later step, not the
+minimum.** Guides: [SETUP_MCP.md](SETUP_MCP.md) and
+[config/mcp-worker/README.md](config/mcp-worker/README.md).
 
 ## Documentation
 

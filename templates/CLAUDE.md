@@ -78,13 +78,18 @@ Everything else loads on demand. If STATUS_SNAPSHOT grows past ~50 lines, prune 
 - No access token anywhere — your local git auth handles pushes.
 - Git author: `Claude (Code)`.
 
-### Claude.ai chat / mobile — optional
+### Claude.ai chat & Projects — read via the GitHub connector (token-free)
 
-Chat has no persistent local clone and a different tool set (`conversation_search`,
-`memory_user_edits`, `recent_chats` — none of which exist in Claude Code). To use
-the repo from chat, deploy the optional MCP worker (see `SETUP_MCP.md`) or clone
-per session. If you clone in chat, the access token lives in claude.ai's settings —
-**never in a repo file**.
+Connect the repo once under Settings → Connectors → GitHub (OAuth — no token):
+- **Chat:** attach `STATUS_SNAPSHOT.md` + the relevant hub with ＋ → Add from GitHub.
+- **Projects:** sync the repo as context; click Sync to refresh.
+
+This path is **read-only** — the connector pulls files, it doesn't commit. Write
+memory back in Claude Code (local git, or Claude Code on the web — pushes a branch /
+opens a PR) or via the optional MCP worker (`SETUP_MCP.md`). From a plain chat,
+propose the edit and apply it in Code. The claude.ai-only tools
+(`conversation_search`, `memory_user_edits`, `recent_chats`) don't exist in Claude
+Code — don't rely on them there.
 
 ## Optional enrichments
 

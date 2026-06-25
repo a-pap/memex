@@ -76,11 +76,10 @@ Keep startup cost (CLAUDE.md + STATUS_SNAPSHOT) under 8K tokens. Everything else
 
 ## Surface-Specific Behavior
 
-### Claude Chat (claude.ai web/mobile)
-- Clone or pull repo via bash tool
-- Read STATUS_SNAPSHOT → relevant hub → answer
-- After changes: commit + push
-- If no bash: fall back to conversation_search + userMemories
+### Claude Chat & Projects (claude.ai)
+- Connect the repo via the native GitHub connector (OAuth, no token).
+- Chat: attach STATUS_SNAPSHOT + the relevant hub (＋ → Add from GitHub). Project: sync the repo as context.
+- Read-only — the connector pulls files; writes go through Claude Code or the optional MCP worker.
 
 ### Claude Code (CLI)
 - Repo IS the working directory
