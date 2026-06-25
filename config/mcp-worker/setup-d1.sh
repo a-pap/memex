@@ -13,12 +13,12 @@
 # Prerequisites:
 #   - brew install wrangler  (or npm i -g wrangler)
 #   - A Cloudflare account with Workers + D1 enabled
-#   - A GitHub Personal Access Token with repo scope (for the worker to read your memory repo)
+#   - A GitHub fine-grained PAT with Contents: read/write on your memory repo (not classic "repo" scope)
 #
 # Required environment variables (NEVER hardcode these — export them in your shell):
 #   CLOUDFLARE_API_TOKEN   — Cloudflare API token with "Workers Scripts:Edit" + "D1:Edit" perms
 #   MCP_AUTH_TOKEN         — a random 64-character hex string (generate with: openssl rand -hex 32)
-#   GITHUB_PAT             — GitHub PAT with repo scope for your memory repo
+#   GITHUB_PAT             — GitHub fine-grained PAT, Contents: read/write on your memory repo
 #
 # Optional:
 #   KG_SEED_FILE           — path to a .sql file with your own INSERT statements for knowledge_graph
@@ -113,7 +113,6 @@ echo ""
 echo "Next steps:"
 echo "  1. Add the MCP connector to claude.ai:"
 echo "       Settings → Connectors → Add custom MCP"
-echo "       URL:  $WORKER_URL/mcp"
-echo "       Auth: Bearer \$MCP_AUTH_TOKEN  (or use $WORKER_URL/mcp/\$MCP_AUTH_TOKEN)"
+echo "       URL:  $WORKER_URL/mcp/\$MCP_AUTH_TOKEN   (token in the path; treat the whole URL as a secret)"
 echo "  2. Edit CLAUDE.md and hubs/ in your memory repo to match your own context."
 echo "  3. Call wake_up from claude.ai to confirm end-to-end flow."

@@ -93,7 +93,7 @@ Keep startup cost (CLAUDE.md + STATUS_SNAPSHOT) under 8K tokens. Everything else
 
 ## Token Economics
 
-Real measurements from a production Memex installation (9 domain hubs, 6+ months of data):
+The figures below are for a **lean install** (a routing `CLAUDE.md` + a ~50-line snapshot) — the *floor*, not a promise. A mature setup with a large routing file and many hubs runs higher: a heavily-used production install can start around ~10K tokens, not ~2.5K. The durable claim is the *shape* — load Level 0, escalate only on a miss — not a specific number:
 
 ### Startup cost
 
@@ -124,12 +124,12 @@ Real measurements from a production Memex installation (9 domain hubs, 6+ months
 
 ### Why this matters
 
-Most memory systems load everything into context on every conversation — 40K-50K+ tokens of history, embeddings, and metadata. This causes:
+A naive memory setup loads everything into context on every conversation — tens of thousands of tokens of history and metadata. (Well-built vector systems retrieve a filtered top-k rather than the whole store; the failure mode is the *naive* one, not retrieval per se.) Either way, more input is not free:
 - **Token waste** — paying for irrelevant context on every API call
 - **Context rot** — model accuracy degrades as input grows, by position ([Liu et al., *Lost in the Middle*, 2023](https://aclanthology.org/2024.tacl-1.9/)) and independently by length ([Chroma, *Context Rot*, 2025](https://www.trychroma.com/research/context-rot))
 - **Slower responses** — more input tokens = higher latency
 
-Memex's graduated loading means a typical session uses **5-7K tokens** of memory context — ~10% of what a dump-everything approach would use.
+Memex's graduated loading keeps a typical session to a few thousand tokens of memory context — a fraction of what loading every hub would cost, and the discipline holds as your memory grows.
 
 ## Architecture patterns (battle-tested)
 

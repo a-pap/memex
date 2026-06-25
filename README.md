@@ -5,11 +5,12 @@
 [![Setup: 10 min](https://img.shields.io/badge/Setup-10_min-brightgreen.svg)](QUICKSTART.md)
 [![Design: Git as RAG](https://img.shields.io/badge/Design-Git_as_RAG-purple.svg)](GIT_AS_RAG.md)
 
-Claude forgets everything between conversations. Built-in memory is
-auto-generated, opaque, and lags by days. Memex gives you **structured memory you
-control** — a private git repository of plain-text markdown, retrieved by a curated
-routing table and graduated loading. It is RAG without a vector database, and it
-runs on nothing but a git repo and the model you already use.
+Claude's built-in memory is getting good — but it's auto-synthesized on Claude's
+schedule and lives inside one vendor. Memex is the opposite bet: **structured memory
+you own and edit** — a private git repository of plain-text markdown, retrieved by a
+curated routing table and graduated loading. You can read every fact, correct one
+precisely, roll it back, and carry it across models and vendors. It is RAG without a
+vector database, and it runs on nothing but a git repo and the Claude you already use.
 
 > **The design, in one essay:** [**Git as RAG — curated retrieval as agent
 > memory →**](GIT_AS_RAG.md). Why a curated repo beats an embedding store for

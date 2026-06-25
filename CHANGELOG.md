@@ -2,6 +2,45 @@
 
 All notable changes to the Memex blueprint.
 
+## 2026-06-25 — v2.7: pre-distribution hardening (security, honesty, dogfooding, tests)
+
+A full audit before sharing the project publicly — four parallel reviews (security,
+fresh-install correctness, competitive value, dogfooding), then fixes.
+
+### Fixed (security)
+
+- **MCP worker auth.** The bare `/mcp` path served every tool (including writes) with
+  no authentication, while the docs promised "Bearer header" auth. The worker now
+  **requires the secret token in the URL path** (`/mcp/<token>`) and rejects bare
+  `/mcp` with 401. Docs (`SECURITY.md`, `SETUP_MCP.md`, `config/mcp-worker/README.md`,
+  `setup-d1.sh`) corrected to the honest token-in-path model.
+- PAT-scope guidance aligned to fine-grained **Contents: read/write** (was classic "repo" scope).
+- Git history re-verified clean of secrets; no personal-data leak. (The worker is
+  opt-in; the default git-only path was already clean.)
+
+### Changed (honesty / accuracy)
+
+- `GIT_AS_RAG.md` §8 now cites the closest neighbors to its thesis — DiffMem and the
+  Git Context Controller (arXiv:2508.00031) — and sharpens the novelty claim to the
+  *curated routing + cost-graduated loading, personal multi-surface* convention.
+- README no longer calls Claude's built-in memory "opaque and lags by days" (it has
+  improved); it keeps the real differentiators (own / edit / roll back / portable).
+- `ARCHITECTURE.md` token economics reframed as a *floor*, not a fixed measurement (a
+  mature install starts ~10K, not ~2.5K); softened the "dump-everything" strawman.
+
+### Fixed (out-of-box correctness)
+
+- Install now seeds `memory/` so `BOOTSTRAP.md`'s references resolve.
+- Removed a broken `docs/LITE_VS_FULL.md` link and a dead `setup-d1.sql` command.
+- `SKILL_CATALOG.md` documents both skill locations (project `.claude/skills/` and
+  global `~/.claude/skills/`).
+
+### Added (verification)
+
+- `tests/test-install-sim.sh` — a fresh-fork install simulation (seeds templates,
+  checks structure, asserts zero tokens / sandbox paths, link integrity) wired into CI
+  as a gate, so every change is verified before it ships.
+
 ## 2026-06-24 — v2.6: read your memory in Claude chat & Projects (token-free)
 
 Documented the native **GitHub connector** path so the memory repo works in claude.ai

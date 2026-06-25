@@ -56,7 +56,7 @@ If the clone asks for credentials, the user signs in with git as they normally d
 #### 2c. Seed templates
 ```bash
 cp templates/STATUS_SNAPSHOT.md templates/CLAUDE.md templates/RULES.md templates/BOOTSTRAP.md .
-cp -r templates/hubs .
+cp -r templates/hubs templates/memory .
 mkdir -p .claude/skills && cp -r templates/skills/* .claude/skills/
 ```
 

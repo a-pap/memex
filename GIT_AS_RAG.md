@@ -256,6 +256,15 @@ This is a synthesis, not a discovery. The debts, and the honest deltas:
   (line-level history, diff, blame, branching, offline restore) plus the **curated
   routing table and graduated loading** as an explicit, cost-staged retrieval
   policy on top.
+- **Git-native memory is its own small, active cluster** — and the closest neighbors
+  to this essay's headline. [DiffMem](https://github.com/Growth-Kinetics/DiffMem)
+  stores agent memory as git-backed markdown and retrieves through git's own
+  log/blame/grep; the [Git Context Controller](https://arxiv.org/abs/2508.00031)
+  (2025) gives an agent explicit COMMIT/BRANCH/MERGE operations over its memory; and
+  other "git for agent memory" projects share the instinct. "Git as memory" is not a
+  discovery here. What this essay adds is narrower and less crowded: the curated
+  routing table + cost-graduated loading as a *personal, multi-surface* policy on top
+  of that substrate.
 
 The genuinely less-trodden parts are two: **cost-graduated loading as a first-class
 retrieval policy**, and **curated routing as primary with embeddings built from the

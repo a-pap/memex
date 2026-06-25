@@ -6,7 +6,7 @@ A Cloudflare Worker that exposes your Git-based memory repo as **26 MCP tools** 
 
 ```
 Claude.ai / Mobile / Cowork
-    ↓ MCP protocol (optional Bearer or URL-path auth)
+    ↓ MCP protocol (secret token in the URL path)
 Cloudflare Worker (src/index.ts)
     ├── GitHub API → repo files (read/write/search)
     └── D1 Database → structured data (facts, sessions, errors, KG)
@@ -15,7 +15,7 @@ Cloudflare Worker (src/index.ts)
 - **Runtime:** Cloudflare Workers (edge, ~50ms cold start)
 - **Repo access:** GitHub REST API with a fine-grained PAT (Contents read/write)
 - **Database:** Cloudflare D1 (SQLite at edge) — default region WEUR (Paris)
-- **Auth:** Bearer token (header) OR URL-path token (`/mcp/<token>`), both optional
+- **Auth:** a secret token in the URL path (`/mcp/<token>`) — **required**. The Worker fails closed if the token is unset, and the bare `/mcp` path is rejected (401). There is no header-based auth — treat the full URL as a credential.
 - **Type-safety:** `zod` schemas + MCP `ToolAnnotations` on every tool
 
 ## Tools (26)
@@ -117,9 +117,7 @@ Tables are auto-created on first D1 write (`ensureTables` in `src/index.ts`), so
 ## Connecting Claude.ai
 
 1. Go to claude.ai → Settings → Connectors → Add custom MCP
-2. Fill in:
-   - **URL:** `https://<your-worker>.workers.dev/mcp` (Bearer auth via client)
-   - **OR:** `https://<your-worker>.workers.dev/mcp/<MCP_AUTH_TOKEN>` (URL-path auth, no Bearer header needed)
+2. **URL:** `https://<your-worker>.workers.dev/mcp/<MCP_AUTH_TOKEN>` — the token is part of the path. **Treat the whole URL as a secret:** anyone who has it can read and write your repo. The bare `https://<your-worker>.workers.dev/mcp` URL is rejected.
 3. Call `wake_up` in a new chat to confirm all 26 tools are wired.
 
 ## Development
@@ -131,7 +129,7 @@ npx wrangler dev    # local dev server, D1 preview
 npx tsc --noEmit    # type-check without deploying
 ```
 
-See [../../SETUP_MCP.md](../../SETUP_MCP.md) for the full end-to-end setup guide, and [../../docs/LITE_VS_FULL.md](../../docs/LITE_VS_FULL.md) to decide between the Lite (repo only, no MCP) and Full (MCP Worker) modes.
+See [../../SETUP_MCP.md](../../SETUP_MCP.md) for the full end-to-end setup guide, and [../../README.md](../../README.md) to decide between the git-only default (repo only, no MCP) and the optional Full (MCP Worker) mode.
 
 ## Version history
 

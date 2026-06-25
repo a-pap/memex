@@ -34,14 +34,15 @@ Use **fine-grained tokens** (not classic) when possible:
 | Permissions | **Contents: Read and write** | Minimum needed for git push |
 | Expiration | 90 days | Balance between security and convenience |
 
-### Where the PAT lives
+### Where the PAT lives (and where it doesn't)
 
-The PAT is stored in **Claude's memory edits** (embedded in the clone URL). This is by design — Claude needs authenticated git access to function. The tradeoff:
+The default path needs **no PAT at all**:
 
-- **Pro:** Claude can autonomously pull/push without asking for credentials every time
-- **Con:** The PAT is visible to Claude and stored in Anthropic's systems
+- **Claude Code (default):** git authentication uses your local credential helper or SSH key. No token is stored in the repo or anywhere else.
+- **Claude chat / Projects (read):** the native GitHub connector authenticates via OAuth — no token to paste.
+- **MCP Worker (optional, Full mode):** the only place a PAT lives. It is a **Cloudflare Worker secret** (encrypted at rest, never in the repo, never in git). The Worker uses it to read/write the repo on your behalf.
 
-If this tradeoff is unacceptable, use **Claude Code in Lite mode** — git authentication happens via your local credential helper, and no PAT is stored in memory edits.
+Never embed a PAT in a committed file (for example a `https://TOKEN@github.com/...` clone URL). Git history is permanent.
 
 ## What NOT to store in the repo
 
@@ -67,14 +68,13 @@ If this tradeoff is unacceptable, use **Claude Code in Lite mode** — git authe
 
 ### Authentication
 
-The MCP Worker supports Bearer token auth via `AUTH_PATH_TOKEN`:
+The MCP Worker authenticates with a secret token **in the URL path** — there is no header-based auth:
 
 ```
-Connector URL: https://your-worker.your-subdomain.workers.dev/mcp
-Authorization: Bearer <your-token>
+Connector URL: https://your-worker.your-subdomain.workers.dev/mcp/<AUTH_PATH_TOKEN>
 ```
 
-`AUTH_PATH_TOKEN` is **required**. The Worker fails closed: if the secret is not set, every `/mcp` request is rejected with `503 server misconfigured` rather than being served unauthenticated. Set `AUTH_PATH_TOKEN` before the endpoint will serve any tool calls.
+Treat the whole URL as a credential — anyone who has it can read and write your repo. `AUTH_PATH_TOKEN` is **required**: the Worker fails closed (every request returns `503`) if the secret is unset, and the bare `/mcp` path — or any missing/wrong token — is rejected with `401`. It never serves a tool call unauthenticated.
 
 ### Cloudflare Worker secrets
 
@@ -100,7 +100,7 @@ If you suspect your PAT was compromised:
 
 1. **Revoke immediately:** GitHub → Settings → Developer settings → Personal access tokens → Delete
 2. **Generate a new PAT** with the same minimal scope
-3. **Update memory edit** with the new clone URL
+3. **Re-authenticate:** re-set the Worker's `GITHUB_PAT` secret (Full mode) and/or reconnect the GitHub connector in claude.ai. There is no clone URL or token stored in the repo to update.
 4. **Check git log** for any unauthorized commits
 5. **Rotate `AUTH_PATH_TOKEN`** if MCP Worker is deployed
 

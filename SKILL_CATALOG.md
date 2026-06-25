@@ -2,8 +2,11 @@
 
 Skills are repeatable procedures Claude runs when a trigger phrase or context
 matches. Claude Code discovers them in **`.claude/skills/<name>/SKILL.md`** — that's
-where the setup step copies them. (A bare `skills/` directory at the repo root is
-*not* auto-discovered by Claude Code.)
+where the setup step copies them, so the skills travel with your memory repo. (A bare
+`skills/` directory at the repo root is *not* auto-discovered by Claude Code.) Skills
+can also live in **`~/.claude/skills/`** to be available across all your projects —
+use that if you'd rather keep one global skill set than per-repo copies. After adding
+a brand-new skills directory mid-session, restart Claude Code so it's picked up.
 
 ## Included in the blueprint
 

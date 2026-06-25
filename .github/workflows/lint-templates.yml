@@ -145,3 +145,6 @@ jobs:
             echo "::error::examples/ should contain at least 3 demo files (found $count)"
             exit 1
           fi
+
+      - name: Install simulation (fresh fork → working Claude Code repo)
+        run: bash tests/test-install-sim.sh

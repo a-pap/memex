@@ -65,10 +65,7 @@ chmod +x setup-d1.sh
 ./setup-d1.sh
 ```
 
-Or manually:
-```bash
-npx wrangler d1 execute claude-memory-db --remote --file=setup-d1.sql
-```
+(Tables also auto-create on the worker's first D1 write, so this step is optional — `setup-d1.sh` just does it up front and sets the secrets.)
 
 ### 6. Deploy
 
@@ -82,8 +79,7 @@ Your worker is now live at `https://claude-memory-mcp.YOUR_SUBDOMAIN.workers.dev
 
 1. Go to [claude.ai](https://claude.ai) → Settings → Integrations
 2. Add MCP Server
-3. URL: `https://claude-memory-mcp.YOUR_SUBDOMAIN.workers.dev/mcp`
-4. (If you set AUTH_PATH_TOKEN): use `https://...workers.dev/mcp/YOUR_TOKEN`
+3. URL: `https://claude-memory-mcp.YOUR_SUBDOMAIN.workers.dev/mcp/YOUR_AUTH_PATH_TOKEN` — the token is part of the path. **Treat the whole URL as a secret** (anyone with it can read/write your repo). The bare `/mcp` URL is rejected.
 
 ### 8. Set up CI/CD (optional but recommended)
 

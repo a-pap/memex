@@ -42,7 +42,7 @@ same local auth you just used to clone; none of your credentials go into the rep
 ```bash
 # Core files at the repo root
 cp templates/STATUS_SNAPSHOT.md templates/CLAUDE.md templates/RULES.md templates/BOOTSTRAP.md .
-cp -r templates/hubs .
+cp -r templates/hubs templates/memory .
 
 # Skills go where Claude Code discovers them: .claude/skills/
 mkdir -p .claude/skills

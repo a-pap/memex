@@ -1256,7 +1256,10 @@ export default {
       );
     }
 
-    // Auth: accept /mcp (for claude.ai connector) and /mcp/{token} (for direct calls)
+    // Auth model: the secret token lives in the URL PATH — /mcp/{AUTH_PATH_TOKEN}.
+    // Treat the full URL as a credential. There is NO header-based auth, and the
+    // bare /mcp path is NOT accepted (it would otherwise serve every tool,
+    // including the write tools, to anyone who guesses the .workers.dev URL).
     if (!path.startsWith("/mcp")) {
       return new Response(JSON.stringify({ error: "not found" }), {
         status: 404,
@@ -1264,8 +1267,7 @@ export default {
       });
     }
 
-    // Auth must fail CLOSED: if no token is configured, reject rather than
-    // letting every /mcp request through unauthenticated.
+    // Fail CLOSED: if no token is configured, reject rather than serving open.
     if (!env.AUTH_PATH_TOKEN) {
       return new Response(
         JSON.stringify({ error: "server misconfigured: AUTH_PATH_TOKEN not set" }),
@@ -1273,9 +1275,10 @@ export default {
       );
     }
 
-    // If /mcp/{token} — validate token
+    // Require /mcp/{token} and validate it. Bare /mcp, a missing token, or a
+    // wrong token all get 401 — the endpoint never serves unauthenticated.
     const match = path.match(/^\/mcp\/(.+)$/);
-    if (match && match[1] !== env.AUTH_PATH_TOKEN) {
+    if (!match || match[1] !== env.AUTH_PATH_TOKEN) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
