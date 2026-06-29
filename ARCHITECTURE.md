@@ -171,6 +171,12 @@ Reusable components — skills, prompts, sub-agent definitions — are scored ag
 
 *Example:* a new skill is scored on a published rubric; anything below the threshold is rejected by an automated guard at commit time. Every accepted skill names what invokes it, what it produces, and how a reader confirms the output is correct.
 
+### 7. Compile once; lint the links that bind it
+
+Knowledge is synthesized into the store **once, at ingest** — read the source, merge it into the relevant pages, resolve cross-references — rather than re-derived from raw fragments on every query. The compiled artifact compounds; the corpus does not. But a base bound by *textual* pointers ("see page X", "rule §N", "file path/Y") is only as trustworthy as those pointers, and a renamed page or deleted section leaves a dangling reference that no ordinary test catches. So a periodic lint pass walks every pointer and flags the ones that no longer resolve — the way a compiler flags an undefined symbol. Synthesis that merges-and-reconciles (never tail-appends) plus a link linter is what keeps a self-maintaining base from quietly rotting.
+
+*Example:* a new document is read once and folded into existing entity pages with explicit links; later questions read the already-compiled pages, not the raw source. A separate check resolves each `page NN`, `§N`, and file-path pointer against the live tree and reports any that dangle; it runs inside the repo health aggregator as a non-blocking warning, so drift surfaces before it compounds. (This is the "ingest / query / **lint**" triad of the compile-don't-retrieve knowledge-base pattern.)
+
 ## What NOT to Store
 
 - API keys, tokens, passwords (except PAT in memory edits — necessary for private repo access)

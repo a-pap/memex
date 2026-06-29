@@ -2,6 +2,20 @@
 
 All notable changes to the Memex blueprint.
 
+## 2026-06-28 — v2.8: the lint primitive (compile, don't re-retrieve)
+
+### Added
+
+- **`ARCHITECTURE.md` pattern 7 — "Compile once; lint the links that bind it."**
+  Documents the third operational primitive of a self-maintaining knowledge base
+  (ingest / query / **lint**): synthesize each source once and merge-reconcile it
+  into the store rather than re-deriving on every query, then run a periodic link
+  lint so textual cross-references (`page NN`, `§N`, file paths) can't dangle
+  silently after a rename or move. Convergent with the widely-shared
+  compile-don't-retrieve knowledge-base pattern; the reference implementation
+  adds a `memory-lint` cross-reference checker wired into its repo-health
+  aggregator as a non-blocking warning.
+
 ## 2026-06-25 — v2.7: pre-distribution hardening (security, honesty, dogfooding, tests)
 
 A full audit before sharing the project publicly — four parallel reviews (security,
