@@ -72,7 +72,9 @@ then ok "internal doc links resolve"; else bad "a broken internal doc link"; fi
 
 # 6. The git-only path must never require a token in a file. The word "token" may
 #    appear (as an anti-pattern warning); assert no instruction to commit one.
-if grep -rIn 'TOKEN@github' QUICKSTART.md START_HERE.md ONBOARDING.md templates/CLAUDE.md 2>/dev/null \
+#    ARCHITECTURE.md is in scope: its "What NOT to Store" section states the
+#    no-token-in-any-repo-file rule and must never regress into an exception.
+if grep -rIn 'TOKEN@github' QUICKSTART.md START_HERE.md ONBOARDING.md ARCHITECTURE.md templates/CLAUDE.md 2>/dev/null \
      | grep -vi 'never' | grep -vi 'leaks' >/dev/null; then
   bad "a setup doc still instructs embedding a token in a URL"
 else

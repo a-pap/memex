@@ -52,7 +52,8 @@ jobs:
             -e '(^|[^A-Za-z0-9_])grn_[A-Za-z0-9_]{20,}' \
             -e '(^|[^A-Za-z0-9_])[0-9a-f]{60,}([^A-Za-z0-9_]|$)' \
             --include='*.md' --include='*.ts' --include='*.js' \
-            --include='*.json' --include='*.yml' --include='*.yaml' \
+            --include='*.json' --include='*.jsonl' \
+            --include='*.yml' --include='*.yaml' \
             --include='*.toml' --include='*.sh' --include='*.bash' \
             --include='*.env' --include='*.example' \
             --exclude-dir=node_modules --exclude-dir=.git \
@@ -109,7 +110,11 @@ jobs:
 
       - name: Check internal links
         run: |
-          EXIT=0
+          # Findings are collected in a file, not a shell variable: the
+          # `| while read` loop runs in a pipeline subshell, so assignments
+          # made inside it never reach the parent shell. The previous
+          # `EXIT=1` was silently discarded and this gate could never fail.
+          BROKEN="$(mktemp)"
           for file in README.md ARCHITECTURE.md QUICKSTART.md SETUP.md SETUP_MCP.md; do
             if [ ! -f "$file" ]; then
               echo "::warning::Referenced file $file does not exist"
@@ -118,12 +123,16 @@ jobs:
             # Extract markdown links [text](path) that point to local files
             grep -oP '\[.*?\]\(\K[^)#]+' "$file" | grep -v '^http' | while read -r link; do
               if [ ! -e "$link" ]; then
-                echo "::error::Broken link in $file: $link"
-                EXIT=1
+                echo "$file: $link" >> "$BROKEN"
               fi
             done
           done
-          exit $EXIT
+          if [ -s "$BROKEN" ]; then
+            echo "::error::Broken internal link(s) found:"
+            cat "$BROKEN"
+            exit 1
+          fi
+          echo "All internal links resolve."
 
       - name: Verify required files exist
         run: |

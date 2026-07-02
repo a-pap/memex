@@ -323,4 +323,4 @@ the trail. Keep it in plain text. Own the repo. Let the agent walk it.
 - mem0 — [github.com/mem0ai/mem0](https://github.com/mem0ai/mem0) · LangMem — [github.com/langchain-ai/langmem](https://github.com/langchain-ai/langmem) · Basic Memory — [github.com/basicmachines-co/basic-memory](https://github.com/basicmachines-co/basic-memory)
 - Sparse vs. dense vs. hybrid retrieval — [reference](https://milvus.io/ai-quick-reference/what-is-the-difference-between-sparse-and-dense-retrieval)
 
-*License: [CC BY-NC 4.0](LICENSE). Part of [Memex](README.md).*
+*License: [CC BY-NC 4.0](LICENSE-prose.md). Part of [Memex](README.md).*

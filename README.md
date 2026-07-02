@@ -246,4 +246,4 @@ minimum.** Guides: [SETUP_MCP.md](SETUP_MCP.md) and
 
 ## License
 
-MIT for code, [CC BY-NC 4.0](LICENSE) for the prose. Use, modify, share freely.
+[MIT](LICENSE) for code, [CC BY-NC 4.0](LICENSE-prose.md) for the prose. Use, modify, share freely.

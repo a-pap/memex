@@ -179,7 +179,7 @@ Knowledge is synthesized into the store **once, at ingest** — read the source,
 
 ## What NOT to Store
 
-- API keys, tokens, passwords (except PAT in memory edits — necessary for private repo access)
+- API keys, tokens, passwords — no exceptions; the GitHub PAT lives in claude.ai connector settings or a Cloudflare secret, never in a repo file
 - Full meeting transcripts (live in their source tool)
 - Code architecture (derivable from codebase)
 - Duplicate facts (one canonical home)

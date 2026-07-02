@@ -19,3 +19,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Local agent state — never commit (session observations, planning scratch;
+# may contain private context that must not reach the public mirror)
+.claude/
+.planning/
