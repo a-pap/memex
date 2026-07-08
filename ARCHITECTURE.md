@@ -72,7 +72,7 @@ Keep startup cost (CLAUDE.md + STATUS_SNAPSHOT) under 8K tokens. Everything else
 1. **Current conversation** (freshest)
 2. **Git repo hub files** (committed, verified) — PRIMARY for facts
 3. **External tools** (cloud drive, meeting transcription, calendar — optional enrichment)
-4. **userMemories** (auto-generated, may lag weeks — last resort)
+4. **Platform auto-memory** (claude.ai classic summary or the newer Memory-files notes — auto-generated, may lag; last resort)
 
 ## Surface-Specific Behavior
 
