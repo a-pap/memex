@@ -189,7 +189,7 @@ const INDEXER_EXCLUDE_PREFIXES = [
   ".planning/",
   "config/",
   "scripts/",
-  "rsya_scripts/",
+  "[employer-ad-network]_scripts/",
   "user-artifacts-worker/",
   "tests/",
   "skills/",
@@ -701,13 +701,13 @@ function buildFtsQuery(raw: string): string | null {
 
 // Hub domain-to-path mapping
 const HUB_MAP: Record<string, string> = {
-  [employer-ad-network]: "hubs/04_RSYA_WORK.md",
-  work: "hubs/04_RSYA_WORK.md",
-  experiments: "hubs/04_RSYA_WORK.md",
+  [employer-ad-network]: "hubs/04_[employer-ad-network]_WORK.md",
+  work: "hubs/04_[employer-ad-network]_WORK.md",
+  experiments: "hubs/04_[employer-ad-network]_WORK.md",
   meetings: "hubs/05_MEETINGS.md",
   relocation: "hubs/06_RELOCATION.md",
   barcelona: "hubs/06_RELOCATION.md",
-  [side-project]: "hubs/07_PASSLOCAL.md",
+  [side-project]: "hubs/07_[side-project].md",
   [pet]: "hubs/08_JAY.md",
   spanish: "hubs/09_SPANISH.md",
   blog: "hubs/10_BLOG.md",
@@ -1066,11 +1066,11 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       "",
       "**Write protocol:** mobile sessions DO NOT auto-archive. Any decision, hub edit, plan, or fact worth keeping → `update_file` immediately. End every session with `auto_log({surface:'mobile', summary:'<3-7 words>'})` so the desktop audit hook picks it up.",
       "",
-      "**Trust ladder:** current conversation > committed hubs (PRIMARY for facts) > Granola/Drive (enrichment) > userMemories snapshot (may lag). When unsure say 'let me check' and call a tool; never guess on ongoing-topic facts.",
+      "**Trust ladder:** current conversation > committed hubs (PRIMARY for facts) > Granola/Drive (enrichment) > claude.ai auto-memory (Memory files mode since 2026-07-08; auto-generated, may lag — see root MEMORY_EDITS.md). When unsure say 'let me check' and call a tool; never guess on ongoing-topic facts.",
       "",
       "**Behavioral rules:** ru/en NEVER mixed in one reply; conclusions-first; absolute dates only (`2026-05-13`, not `today`); SETTLED decisions (see STATUS_SNAPSHOT 'Key decisions') don't get re-opened; personal data never ships to public surfaces (RULES.md §10). Full cross-surface behavioral canon (modes STRATEGY/EXECUTION/STUCK/PERSONAL, the Don'ts, verification-before-'done', autonomy levels) → `read_file({path:'PREFERENCES.md'})` once at session start. NOTE: the Mac mechanical guard-hooks (language-mix, secret-scan, TZ-fix, destructive-ops) do NOT run on this surface — self-verify manually.",
       "",
-      "**Telegram to Artём (`tg_send` / Mac `tg-send.sh`) — HARD rule:** write EVERY message in plain human Russian — what happened and why it matters to Artём, the way you'd tell a busy friend. NO internal jargon: no PR/CI/FAIL/test names, no file paths (STATUS_SNAPSHOT / BACKLOG / commit SHAs), no `BACKLOG L37`-style refs, no routine internals. Internal tech-hiccups (CI fails, PR blocks, status-file oversize, auto-merge waits) are handled silently or by retry — do NOT notify Artём about them at all unless he must personally act; if he must, 1-3 plain lines, zero codes. He reads these on his phone — if it isn't readable by a non-engineer, it failed. First line = the outcome (it doubles as the push preview); last line = «Нужно от тебя: …» or «Действий не нужно»; ≥3 parallel results → ONE digest, not a ping series; say «готово» only after actually verifying the artifact (otherwise «сделал, но не проверил»); for long tasks promise WHEN the next update comes and keep that promise; don't re-report the same error within ~4h. tg_send now enforces a kitchen-lint (rejects PR#/commit hashes/CI/FAIL/repo paths) — if rejected, REWRITE in plain Russian; skip_lint only when Artём explicitly asked for a technical dump. **Аббревиатуру [employer-ad-network] всегда писать кириллицей «[employer-ad-network]», никогда латиницей ([employer-ad-network]/RSYA) — исключение только реальные ключи трекера RSYAWEB-NNN.**",
+      "**Telegram to User (`tg_send` / Mac `tg-send.sh`) — HARD rule:** write EVERY message in plain human Russian — what happened and why it matters to User, the way you'd tell a busy friend. NO internal jargon: no PR/CI/FAIL/test names, no file paths (STATUS_SNAPSHOT / BACKLOG / commit SHAs), no `BACKLOG L37`-style refs, no routine internals. Internal tech-hiccups (CI fails, PR blocks, status-file oversize, auto-merge waits) are handled silently or by retry — do NOT notify User about them at all unless he must personally act; if he must, 1-3 plain lines, zero codes. He reads these on his phone — if it isn't readable by a non-engineer, it failed. First line = the outcome (it doubles as the push preview); last line = «Нужно от тебя: …» or «Действий не нужно»; ≥3 parallel results → ONE digest, not a ping series; say «готово» only after actually verifying the artifact (otherwise «сделал, но не проверил»); for long tasks promise WHEN the next update comes and keep that promise; don't re-report the same error within ~4h. tg_send now enforces a kitchen-lint (rejects PR#/commit hashes/CI/FAIL/repo paths) — if rejected, REWRITE in plain Russian; skip_lint only when User explicitly asked for a technical dump. **Аббревиатуру [employer-ad-network] всегда писать кириллицей «[employer-ad-network]», никогда латиницей ([employer-ad-network]/[employer-ad-network]) — исключение только реальные ключи трекера TRACKERQUEUE-NNN.**",
       "",
       "**Artifacts (ANY surface, ANY format) — canon v3.1 «одна система, три режима»:** live guide https://a.user-site.example/6ae26ebfe440 + `read_file({path:'skills/html-artifact-master/SKILL.md'})`. HTML: system+Inter only (serif = blog-only), body 18px, text 84ch / page 1080px, bg #FAF9F7 (personal) | #FCFDFF (corp), blue links #1C5FB8, exactly TWO block shapes (neutral rounded container / semantic left-edge tint — никаких цветных верхних кромок), every tracker key = inline link, copy-payloads = plain text (clipboard.writeText, не rich-selection). PPTX/PDF: [employer-ad-network] brand guide + те же принципы. Новый дизайн-паттерн/фидбэк → сначала обнови гайд (тот же hash) + SKILL, потом применяй.",
       "",
@@ -3460,10 +3460,10 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       // [employer-ad-network] purity: the acronym [employer-ad-network] has no legitimate Latin form, but
       // LLM-generated briefs default to "[employer-ad-network]". Normalize on egress so no
       // Cloud-routine/mobile output leaks Latin. Case-insensitive whole word
-      // ([employer-ad-network]/RSYA/[employer-ad-network]/…). Protect tracker prefix RSYAWEB-NNN (\b after RSYA
+      // ([employer-ad-network]/[employer-ad-network]/[employer-ad-network]/…). Protect tracker prefix TRACKERQUEUE-NNN (\b after [employer-ad-network]
       // fails before "W"; (?!WEB) is belt-and-suspenders).
       // Mirrors scripts/tg-send.sh Stage 00 and telegram-bot sendText.
-      text = text.replace(/\bRSYA\b(?!WEB)/gi, "[employer-ad-network]");
+      text = text.replace(/\b[employer-ad-network]\b(?!WEB)/gi, "[employer-ad-network]");
 
       // Kitchen-lint (TG-дисциплина 2026-06-23, mechanized 2026-07-07): every
       // message lands on User's phone — plain human Russian only. Jargon
