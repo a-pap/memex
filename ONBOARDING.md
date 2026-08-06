@@ -22,8 +22,9 @@ setup directly.
 - **Generate, then confirm.** Ask once for domains (and language); generate hubs and
   status with the user's specifics, or clean placeholders; show a short wrap-up.
 - **claude.ai memory edits are optional and token-free** — short behavioral notes the
-  user pastes into claude.ai settings, mirrored as plain text in
-  `memory/MEMORY_EDITS.md`. They do not apply to Claude Code.
+  user pastes into claude.ai settings (classic memory mode; in the newer Memory-files
+  mode the platform writes its own notes and there is nothing to paste), mirrored as
+  plain text in `memory/MEMORY_EDITS.md`. They do not apply to Claude Code.
 - **No secret by design.** The git-only path stores nothing sensitive. Only the
   optional claude.ai / MCP paths use a token, and it lives in claude.ai settings or a
   Cloudflare secret — never in the repo.

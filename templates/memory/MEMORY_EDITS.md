@@ -16,9 +16,12 @@
 
 ## Notes
 
-- These mirror claude.ai's memory; paste them into claude.ai → Settings →
-  Capabilities → Memory, or just tell Claude "remember …". **Claude Code ignores
-  this file** — it reads the repo directly.
+- These mirror claude.ai's **classic** memory ("remember …" items); paste them into
+  claude.ai → Settings → Memory, or just tell Claude "remember …". If your account
+  uses the newer **Memory files** mode (structured notes the platform writes on its
+  own), there is nothing to paste — keep this file as a drift-check mirror of what
+  the platform believes. **Claude Code ignores this file** — it reads the repo
+  directly.
 - **Never put an access token here.** Embedding a `https://TOKEN@github.com/...`
   clone URL in a memory edit leaks the token into a tracked file. On claude.ai,
   keep any clone token in the chat/connector settings, not in the repo. In Claude

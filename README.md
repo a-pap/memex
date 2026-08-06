@@ -5,10 +5,11 @@
 [![Setup: 10 min](https://img.shields.io/badge/Setup-10_min-brightgreen.svg)](QUICKSTART.md)
 [![Design: Git as RAG](https://img.shields.io/badge/Design-Git_as_RAG-purple.svg)](GIT_AS_RAG.md)
 
-Claude's built-in memory is getting good — but it's auto-synthesized on Claude's
-schedule and lives inside one vendor. Memex is the opposite bet: **structured memory
-you own and edit** — a private git repository of plain-text markdown, retrieved by a
-curated routing table and graduated loading. You can read every fact, correct one
+Claude's built-in memory is getting good — with the 2026 "Memory files" mode it even
+became browsable file-based notes. But it is still written on Claude's schedule,
+curated by the platform, and lives inside one vendor. Memex is the opposite bet:
+**structured memory you own and edit** — a private git repository of plain-text
+markdown, retrieved by a curated routing table and graduated loading. You can read every fact, correct one
 precisely, roll it back, and carry it across models and vendors. It is RAG without a
 vector database, and it runs on nothing but a git repo and the Claude you already use.
 
