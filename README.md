@@ -5,6 +5,8 @@
 [![Setup: 10 min](https://img.shields.io/badge/Setup-10_min-brightgreen.svg)](QUICKSTART.md)
 [![Design: Git as RAG](https://img.shields.io/badge/Design-Git_as_RAG-purple.svg)](GIT_AS_RAG.md)
 
+> **Snapshot note (2026-08-31).** This public mirror reflects the v2.x architecture (48 MCP tools, vector search, nightly analysis loop). The private production system has since been simplified to a **25-tool "thin bridge"** (v3.0, 2026-08-05): GitHub as the only memory, no vector layer, no nightly loop — the simplification itself validated the Git-as-RAG thesis (grep + a routing table beat the index at this scale). Treat the code here as reference architecture, not the live build; a mirror update is pending.
+
 Claude's built-in memory is getting good — but it's auto-synthesized on Claude's
 schedule and lives inside one vendor. Memex is the opposite bet: **structured memory
 you own and edit** — a private git repository of plain-text markdown, retrieved by a
