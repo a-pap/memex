@@ -162,7 +162,9 @@ jobs:
             -e 'eurobelka' -e 'yulia' -e 'rtmpplv' -e '8b2379bf' \
             -e 'PCODE-' -e 'BSSERVER-' -e 'arcadia' -e 'yandex-team' \
             --exclude=LICENSE --exclude=LICENSE-prose.md \
-            ./*.md 2>/dev/null)
+            ./*.md 2>/dev/null | grep -v 'github\.com/a-pap/memex')
+          # ↑ links to THIS public repo (fork / START_HERE instructions) are the
+          #   one legitimate a-pap URL; everything else under a-pap is private.
           set -e
           if [ -n "$HITS" ]; then
             echo "::error::Personal identifier(s) found in root docs:"
