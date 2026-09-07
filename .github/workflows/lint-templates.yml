@@ -31,7 +31,7 @@ jobs:
           # prefix; 36+ covers any future length tweak. 2026-04-20 false
           # positives in templates/skills/weekly-backup/SKILL.md and
           # examples/MEMORY_EDITS_demo.md prompted the tightening.
-          PATTERNS="ghp_[A-Za-z0-9]{36,}|github\.com/a-pap|papilov|artem|yandex|rsya|passlocal"
+          PATTERNS="ghp_[A-Za-z0-9]{36,}|github\.com/a-pap|papilov|artem|yandex|rsya|passlocal|\bjay\b|judit|basenji|belgrade|barcelona|eurobelka|yulia|rtmpplv|8b2379bf|PCODE-|BSSERVER-|arcadia|yandex-team"
           if grep -riE "$PATTERNS" templates/ examples/; then
             echo "::error::Found potential personal data in templates or examples"
             exit 1
@@ -97,6 +97,8 @@ jobs:
             -e 'passlocal' \
             -e 'a-papilov\.workers\.dev' \
             -e 'judit' -e 'basenji' -e 'belgrade' -e 'barcelona' \
+            -e '\bjay\b' -e 'eurobelka' -e 'yulia' -e 'rtmpplv' -e '8b2379bf' \
+            -e 'PCODE-' -e 'BSSERVER-' -e 'arcadia' -e 'yandex-team' \
             --include='*.md' --include='*.ts' --include='*.js' \
             --include='*.json' --include='*.yml' --include='*.yaml' \
             --include='*.toml' --include='*.sh' \
@@ -149,6 +151,25 @@ jobs:
             fi
           done
           exit $MISSING
+
+      # Root-level docs were in neither scan above (audit 2026-09-07, MX-4).
+      - name: Scan root docs for personal identifiers
+        run: |
+          set +e
+          HITS=$(grep -iEn \
+            -e 'github\.com/a-pap' -e 'papilov' -e 'artem' -e 'yandex' -e 'rsya' -e 'passlocal' \
+            -e '\bjay\b' -e 'judit' -e 'basenji' -e 'belgrade' -e 'barcelona' \
+            -e 'eurobelka' -e 'yulia' -e 'rtmpplv' -e '8b2379bf' \
+            -e 'PCODE-' -e 'BSSERVER-' -e 'arcadia' -e 'yandex-team' \
+            --exclude=LICENSE --exclude=LICENSE-prose.md \
+            ./*.md 2>/dev/null)
+          set -e
+          if [ -n "$HITS" ]; then
+            echo "::error::Personal identifier(s) found in root docs:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "No personal identifiers in root docs."
 
       - name: Verify examples directory
         run: |

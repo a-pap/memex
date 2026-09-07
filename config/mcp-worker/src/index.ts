@@ -530,7 +530,7 @@ async function searchRepo(
 
 async function ensureTables(db: D1Database): Promise<void> {
   // NOTE: Schema matches the LIVE D1 database (verified 2026-04-11 against
-  // database id 8b2379bf-7664-477e-9d0f-ccd7f93db744). Earlier worker
+  // database id YOUR_D1_DATABASE_ID). Earlier worker
   // versions shipped a different schema (`facts.key/value`, `errors.tool/
   // message/context`) that silently did not match the live tables. All
   // store_fact / query_facts / log_error / error_report / wake_up-recent-
@@ -708,7 +708,7 @@ const HUB_MAP: Record<string, string> = {
   relocation: "hubs/06_RELOCATION.md",
   cityB: "hubs/06_RELOCATION.md",
   [side-project]: "hubs/07_[side-project].md",
-  [pet]: "hubs/08_JAY.md",
+  [pet]: "hubs/08_PET.md",
   spanish: "hubs/09_SPANISH.md",
   blog: "hubs/10_BLOG.md",
   user: "hubs/10_BLOG.md",
@@ -1059,7 +1059,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       "",
       "**Before any answer about ongoing topics ([employer-ad-network], [pet], cityB relocation, [side-project], Spanish, user-site.example, artifacts, plugins, mobile workflows):**",
       "1. Call `get_snapshot` (or `wake_up` prompt) once — STATUS_SNAPSHOT.md + MEMORY_EDITS.md.",
-      "2. If on iPhone/iPad/web-mobile: also call `get_hub({domain:'00_mobile_kickoff'})` AND `get_hub({domain:'18_mobile_skills_catalog'})` once. They tell you (a) what to load when, (b) which Mac-only skills have mobile equivalents and the exact prompts to orchestrate them via corp MCP (tracker, wiki, calendar, staff, yql, yt, intrasearch, deepagent, granola).",
+      "2. If on iPhone/iPad/web-mobile: also call `get_hub({domain:'00_mobile_kickoff'})` AND `get_hub({domain:'18_mobile_skills_catalog'})` once. They tell you (a) what to load when, (b) which Mac-only skills have mobile equivalents and the exact prompts to orchestrate them via corp MCP (tracker, wiki, calendar, staff, corp-sql, yt, corp-search, corp-agent, granola).",
       "3. Topic-detect from user's first message → `get_hub` for the matched hub per the routing table in CLAUDE.md (read via `read_file({path:'CLAUDE.md'})` if unsure).",
       "4. Optional: `r2_download({key:'work_snapshot/latest.md'})` for fresh corp context (≤90 min old, daily LaunchAgent on Mac); fall back silently if 404.",
       "5. Only then answer.",
@@ -1074,11 +1074,11 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       "",
       "**Artifacts (ANY surface, ANY format) — canon v3.1 «одна система, три режима»:** live guide https://a.user-site.example/6ae26ebfe440 + `read_file({path:'skills/html-artifact-master/SKILL.md'})`. HTML: system+Inter only (serif = blog-only), body 18px, text 84ch / page 1080px, bg #FAF9F7 (personal) | #FCFDFF (corp), blue links #1C5FB8, exactly TWO block shapes (neutral rounded container / semantic left-edge tint — никаких цветных верхних кромок), every tracker key = inline link, copy-payloads = plain text (clipboard.writeText, не rich-selection). PPTX/PDF: [employer-ad-network] brand guide + те же принципы. Новый дизайн-паттерн/фидбэк → сначала обнови гайд (тот же hash) + SKILL, потом применяй.",
       "",
-      "**Hub map (route by topic):** 02 personal · 03/04 [employer-ad-network] work · 05 [employer-ad-network] meeting index · 06 cityB · 07 [side-project] · 08 [pet] health · 09 Spanish · 10 user-site.example · 11 a.user-site.example artifacts · 12 [employer-ad-network] data infra · 13 corp landscape · 14 corp gaps · 15 TG/Arcadia/SO · 16 prompt library · 17 plugins state (Mac) · 18 mobile skills catalog.",
+      "**Hub map (route by topic):** 02 personal · 03/04 [employer-ad-network] work · 05 [employer-ad-network] meeting index · 06 cityB · 07 [side-project] · 08 [pet] health · 09 Spanish · 10 user-site.example · 11 a.user-site.example artifacts · 12 [employer-ad-network] data infra · 13 corp landscape · 14 corp gaps · 15 TG/monorepo/SO · 16 prompt library · 17 plugins state (Mac) · 18 mobile skills catalog.",
       "",
       "**Tool gating by topic (cross-surface policy, 2026-05-27):** при старте КАЖДОЙ новой conversation, после `get_snapshot`, классифицируй topic ПЕРВЫМ user message и применяй gate:",
-      "1. **Clearly work** ([employer-ad-network] / PCODE-* / BSSERVER-* / [employer] meeting / явный запрос про tracker/wiki/yql/yt) — используй corp tools (tracker_mcp, wiki, intrasearch, yql, yt, devtools, ab_experiments, mail_corp, monium_mcp, staff_api_mcp, docs, deepagent, proai) свободно, без вопроса.",
-      "2. **Personal / Entertainment** ([pet], [side-project], Spanish, cityB relocation, user-site.example, фильмы/сериалы/recap, любая non-work тема) — **НЕ трогай corp tools** даже если доступны. Skip tracker/wiki/yql/yt/intrasearch/mail_corp/monium/staff_api. claude-memory tools OK (snapshot, get_hub, read_file, semantic_search, granola_recent, r2_download, update_file, remember) — это shared substrate.",
+      "1. **Clearly work** ([employer-ad-network] / PROJ-* / PROJ-* / [employer] meeting / явный запрос про tracker/wiki/corp-sql/yt) — используй corp tools (tracker_mcp, wiki, corp-search, corp-sql, yt, devtools, ab_experiments, mail_corp, corp-metrics, corp-directory, docs, corp-agent, corp-ai) свободно, без вопроса.",
+      "2. **Personal / Entertainment** ([pet], [side-project], Spanish, cityB relocation, user-site.example, фильмы/сериалы/recap, любая non-work тема) — **НЕ трогай corp tools** даже если доступны. Skip tracker/wiki/corp-sql/yt/corp-search/mail_corp/corp-metrics/corp-directory. claude-memory tools OK (snapshot, get_hub, read_file, semantic_search, granola_recent, r2_download, update_file, remember) — это shared substrate.",
       "3. **Ambiguous** (мог бы быть и работа, и личное — например «найди контакт Х», «расскажи про Y») — **СПРОСИ User явно**: «Это про работу или личное? Если работа — могу через tracker/wiki/staff. Если личное — обойдусь claude-memory.» Не угадывай молча.",
       "4. **Corp tool failure** (timeout / no-auth / endpoint down) — НЕ retry молча. Скажи: «corp endpoint <name> недоступен сейчас; альтернатива X, или подождать пока поднимется?». User решит.",
       "   ⚠ **`tracker_mcp` известно нестабилен (2026-06-01):** его `ya`-stdio транспорт виснет (особенно в суб-агентах/workflow, без таймаута). На Code есть REST-обход `scripts/tracker_rest.py` (`$STARTREK_TOKEN`, Startrek API). В Chat локального обхода нет — статусы тикетов бери из committed hubs (03/04/13/14), а свежий live-pull трекера делегируй Code-сессии.",
@@ -1630,7 +1630,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
           /\b([pet]|дог|pet|renal|urinary|vet|epilep)/i.test(trimmed) ? "[pet]" :
           /\b([employer-ad-network]|рся|experiment|эксперимент|автораст|нейро|overlay)/i.test(trimmed) ? "[employer-ad-network]" :
           /\b([side-project]|stripe|twilio|whatsapp|glovo)/i.test(trimmed) ? "[side-project]" :
-          /\b(bcn|cityB|relocation|visa|eurobelka|аренда)/i.test(trimmed) ? "relocation" :
+          /\b(bcn|cityB|relocation|visa|agency|аренда)/i.test(trimmed) ? "relocation" :
           /\b(spanish|español|teacher|dele|b1|b2)/i.test(trimmed) ? "spanish" :
           "general"
         );
@@ -2887,7 +2887,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
   // decision-shaped object.
   server.tool(
     "meeting_context",
-    "Compose meeting context from D1 cache for any surface (Code/Chat/iPad/TG). Returns matching Granola meetings + action items + prior-session notes. Pass query OR participant OR both. For real-time corp enrichment use Code-local MCPs (wiki/mail/tracker/intrasearch/staff) — this tool surfaces only what's already cached.",
+    "Compose meeting context from D1 cache for any surface (Code/Chat/iPad/TG). Returns matching Granola meetings + action items + prior-session notes. Pass query OR participant OR both. For real-time corp enrichment use Code-local MCPs (wiki/mail/tracker/corp-search/staff) — this tool surfaces only what's already cached.",
     {
       query: z.string().optional().describe("Topic keyword — FTS5-matched on title+summary+transcript"),
       participant: z.string().optional().describe("Participant login or display name (case-insensitive substring match)"),
@@ -2999,7 +2999,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
             parts.push(`- [${(s.created_at || "").slice(0, 16)}] ${s.surface}: ${s.summary.slice(0, 200)}`);
           }
         }
-        parts.push(`\n_Live corp-MCP enrichment (wiki/mail/tracker/intrasearch/staff) is Code-local. This tool surfaces D1 cache only — see RULES.md §13._`);
+        parts.push(`\n_Live corp-MCP enrichment (wiki/mail/tracker/corp-search/staff) is Code-local. This tool surfaces D1 cache only — see RULES.md §13._`);
 
         return { content: [{ type: "text" as const, text: parts.join("\n") }] };
       } catch (e) {
@@ -3438,9 +3438,9 @@ function createServer(env: Env, ctx?: ExecutionContext) {
   // stray punctuation char never breaks the send. Bare URLs auto-link in TG.
   server.tool(
     "tg_send",
-    "Send an outbound Telegram message to the personal bot (@rtmpplv_bot) — task-done pings, artifact URLs, alerts. Works from any surface (mobile/web/Code); the bot token lives only as a Worker secret. Defaults to User's chat. Style (TG-дисциплина): plain human Russian, first line = the outcome and why it matters; NO internal jargon (PR/CI/commit hashes/repo paths) — a kitchen-lint rejects violations. Use this from mobile/web instead of the Mac-only scripts/tg-send.sh.",
+    "Send an outbound Telegram message to the personal bot (@your_bot) — task-done pings, artifact URLs, alerts. Works from any surface (mobile/web/Code); the bot token lives only as a Worker secret. Defaults to User's chat. Style (TG-дисциплина): plain human Russian, first line = the outcome and why it matters; NO internal jargon (PR/CI/commit hashes/repo paths) — a kitchen-lint rejects violations. Use this from mobile/web instead of the Mac-only scripts/tg-send.sh.",
     {
-      text: z.string().min(1).max(16000).describe("Message body. With markdown_lite (default) you may use *bold* _italic_ `code`; bare URLs auto-link; tracker keys (PCODE-123) become clickable st.[employer]-team.ru links."),
+      text: z.string().min(1).max(16000).describe("Message body. With markdown_lite (default) you may use *bold* _italic_ `code`; bare URLs auto-link; tracker keys (PROJ-123) become clickable tracker.example links."),
       chat_id: z.string().optional().describe("Override target chat id. Defaults to TG_DEFAULT_CHAT_ID (User)."),
       markdown_lite: z.boolean().default(true).describe("Convert *bold*/_italic_/`code` to HTML with safe escaping + tracker-key autolink. Set false to send raw plain text."),
       silent: z.boolean().default(false).describe("Deliver without a notification sound (disable_notification)."),
@@ -3470,7 +3470,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       // slips in from LLM-composed routine output (precedent: blog-capture
       // 2026-06-23 "PR #1139 blocked by status_snapshot_size FAIL…"). Reject
       // with a teaching error so the calling agent rewrites. Tracker keys
-      // (PCODE-123) are fine — that's User's work vocabulary, not kitchen.
+      // (PROJ-123) are fine — that's User's work vocabulary, not kitchen.
       // The commit-hash pattern requires ≥1 hex letter and no leading "/" so
       // pure numbers and a.user-site.example/<hash> URLs never false-positive.
       if (!skip_lint) {
@@ -3499,8 +3499,8 @@ function createServer(env: Env, ctx?: ExecutionContext) {
         body = body.replace(/(^|[^\w*])\*([^*\n]+?)\*(?![\w*])/g, "$1<b>$2</b>");
         body = body.replace(/(^|[^\w_])_([^_\n]+?)_(?![\w_])/g, "$1<i>$2</i>");
         // Tracker-key autolink (2026-07-07, parity with tg-send.sh Stage 1a):
-        // Cloud-routine briefs flow through THIS path and their PCODE-/
-        // BSSERVER-keys arrived as plain text while the Mac path linked them.
+        // Cloud-routine briefs flow through THIS path and their PROJ-/
+        // PROJ-keys arrived as plain text while the Mac path linked them.
         // Skip <code> spans (Telegram forbids <a> inside <code>) and keys
         // already inside a URL (preceded by "/").
         body = body
@@ -3508,7 +3508,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
           .map((seg, i) =>
             i % 2 === 1 ? seg : seg.replace(
               /(^|[^\w/=";&-])([A-Z][A-Z0-9_]{1,20}-\d+)(?![\w-])/g,
-              '$1<a href="https://st.[employer]-team.ru/$2">$2</a>'
+              '$1<a href="https://tracker.example/$2">$2</a>'
             )
           )
           .join("");
@@ -3678,7 +3678,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
     {
       query: z.string().describe("Free-form search query in any language."),
       top_k: z.coerce.number().int().min(1).max(20).default(5).describe("Number of results to return (1-20)."),
-      hub_slug: z.string().optional().describe("Optional hub slug filter (e.g. '08_jay_health')."),
+      hub_slug: z.string().optional().describe("Optional hub slug filter (e.g. '08_pet_health')."),
       file_path: z.string().optional().describe("Optional file path filter (e.g. 'hubs/06_relocation.md')."),
     },
     { title: "Semantic Search (Vectorize)", readOnlyHint: true, openWorldHint: true },
@@ -3701,7 +3701,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
   // Semantic top-N candidates re-ranked with local BM25. `alpha` is the
   // semantic weight in [0, 1] — alpha=1 → pure semantic, alpha=0 → pure
   // BM25 (lexical re-rank dominates), alpha=0.5 → balanced.
-  // Use when exact-name matches matter (Eurobelka, Yulia, PCODE-XXXX).
+  // Use when exact-name matches matter (agency, agent, PROJ-XXXX).
   server.tool(
     "hybrid_search",
     "Hybrid semantic + BM25 search. Combines BGE-M3 vector similarity with lexical keyword re-ranking — surfaces exact name matches that pure semantic might rank lower. alpha=1 pure semantic, alpha=0 pure BM25, alpha=0.5 balanced.",
@@ -3829,7 +3829,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
                 mobileKickoff +
                 "\n\n===== hubs/18_mobile_skills_catalog.md =====\n" +
                 mobileCatalog +
-                "\n\n===== Ready. =====\nCall get_hub(domain) for deeper topic reads. Call granola_context(domain|query) for meeting history. Call query_facts(query) for D1 facts. On mobile: every portable workflow (meeting prep, ticket triage, metrics digest, deepagent, publish artifact) is documented above with copy-paste prompts.",
+                "\n\n===== Ready. =====\nCall get_hub(domain) for deeper topic reads. Call granola_context(domain|query) for meeting history. Call query_facts(query) for D1 facts. On mobile: every portable workflow (meeting prep, ticket triage, metrics digest, corp-agent, publish artifact) is documented above with copy-paste prompts.",
             },
           },
         ],

@@ -1,66 +1,54 @@
-# Hub: Max — Pet Health
+# Hub: Milo — Pet Health
 <!-- fresh: 2026-04-09 -->
 
 ## Profile
-- **Name:** Max
-- **Species/breed:** Dog, French Bulldog, male, neutered
-- **DOB:** 2020-06-15 (5 years old)
-- **Weight:** 12.8 kg (target: 12.0-12.5 kg)
+- **Name:** Milo
+- **Species/breed:** Cat, British Shorthair, male, neutered
+- **DOB:** 2018-02-03 (8 years old)
+- **Weight:** 5.4 kg (target: 4.8-5.0 kg)
 - **Microchip:** 123456789012345
 
 ## Current conditions
 
-### Chronic Kidney Disease Stage 2 (diagnosed Oct 2024)
-- **What:** Genetic metabolic disorder → cystine kidney/bladder stones
-- **Diet:** Renal formula → transitioning to urinary-low-purine formula (mid-April, 14-day gradual)
-- **Monitoring:** Urinalysis every 3 months. Last: 2026-03-15 (pH 7.0, no crystals)
-- **Supplements:** Potassium citrate 2x/day
-- **Key rule:** NO high-protein treats. NO chicken jerky. Only prescribed treats.
+### Hyperthyroidism (diagnosed Aug 2025)
+- **What:** Overactive thyroid → weight loss despite appetite, restlessness
+- **Treatment:** Methimazole 2.5 mg 2x/day; radioiodine discussed as the definitive option
+- **Monitoring:** T4 + kidney panel every 3 months. Last: 2026-03-02 (T4 in range, creatinine borderline)
+- **Key rule:** NO iodine-rich treats (fish flakes, seaweed snacks). Prescription diet only.
 
-### Epilepsy (monitoring, no medication)
-- **Seizure log:**
-  | Date | Type | Duration | Recovery | Notes |
-  |------|------|----------|----------|-------|
-  | 2025-12-08 | GTC | ~2 min | 30 min | First seizure. Post-ictal: disoriented, pacing |
-  | 2026-03-31 | GTC | ~90 sec | 20 min | Second seizure. 3.5 month interval |
-- **Interval:** 3.5 months (2 events) — below threshold for AED per vet
-- **Next step:** Brain MRI (Berlin, Jun-Aug 2026). Referral from Dr. Weber.
-- **Emergency protocol:** If cluster (2+ in 24h) → emergency vet immediately. Diazepam rectal 5mg prescribed (carry in travel kit).
+### Dental disease (stage 2)
+- **History:**
+  | Date | Procedure | Notes |
+  |------|-----------|-------|
+  | 2025-05-20 | Scale + polish | Two premolars extracted |
+  | 2026-01-14 | Check-up | Mild gingivitis, home brushing 3x/week |
+- **Next step:** Re-check Jun 2026; extraction of a resorptive lesion if it progresses.
 
-### Mobility (resolved)
-- **Issue:** Rear leg lameness after park incident (Mar 2026)
-- **Treatment:** 2 weeks rest + meloxicam 0.1mg/kg
-- **Outcome:** Restriction ended Apr 8. Full mobility restored.
+### Urinary blockage (resolved)
+- **Issue:** Straining episode after a stressful move (Sep 2025)
+- **Treatment:** 3 days at the clinic, urinary diet since
+- **Outcome:** No recurrence. Water fountain + wet food keep intake up.
 
 ## Veterinary team
 | Role | Name | Clinic | Notes |
 |------|------|--------|-------|
-| Primary vet | Dr. Weber | CityVet Mitte | Renal specialist. Speaks English. |
-| Emergency | — | Tierklinik Düppel | 24/7. 25 min drive. |
-| Neurologist | TBD | — | Need referral for MRI in Berlin |
+| Primary vet | Dr. Novak | Riverside Vets | Feline medicine. Speaks English. |
+| Emergency | — | Metro Animal Hospital | 24/7. 20 min drive. |
+| Endocrinology | TBD | — | Referral needed before radioiodine |
 
 ## Medication & supplements
 | What | Dose | Frequency | With food? | Notes |
 |------|------|-----------|------------|-------|
-| Potassium citrate | 75mg/kg | 2x/day | Yes | Alkalinize urine |
-| Urinary-LP formula | 150g/day | 2 meals | — | Transitioning from renal formula |
-| Diazepam rectal | 5mg | PRN | — | Emergency only (cluster seizures) |
-
-## Diet transition plan (Apr 2026)
-| Days | Old (renal formula) | New (urinary-LP formula) |
-|------|---------------------|--------------------------|
-| 1-3 | 75% | 25% |
-| 4-7 | 50% | 50% |
-| 8-11 | 25% | 75% |
-| 12-14 | 0% | 100% |
+| Methimazole | 2.5 mg | 2x/day | Yes | Thyroid |
+| Urinary diet (wet) | 2 × 85 g | 2 meals | — | Since the blockage |
+| Dental gel | pea-sized | 3x/week | — | After brushing |
 
 ## Travel considerations
-- EU Pet Passport: valid, rabies titer current (exp. 2027-06)
-- Airlines: Only cabin-approved carriers. Max fits Sherpa Medium.
-- Car: Secured crate in back seat. Water every 2h, breaks every 3h.
-- Emergency kit: diazepam, potassium citrate, vet records PDF, microchip cert
+- EU Pet Passport: valid, rabies vaccination current (exp. 2027-03)
+- Airlines: cabin carrier only; Milo fits a soft carrier 45 × 30 × 25 cm.
+- Car: carrier belted on the back seat. Water offered every 2 h.
+- Emergency kit: methimazole for 14 days, vet records PDF, microchip cert
 
 ## Upcoming
-- **Mid-April:** Complete diet transition to urinary-LP formula
-- **May:** EU trip — carry emergency kit, locate emergency vets on route
-- **Jun-Aug:** Brain MRI in Berlin (schedule after relocation)
+- **Jun:** dental re-check
+- **Q3:** decide on radioiodine after the next T4 + kidney panel
