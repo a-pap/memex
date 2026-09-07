@@ -706,7 +706,7 @@ const HUB_MAP: Record<string, string> = {
   experiments: "hubs/04_[employer-ad-network]_WORK.md",
   meetings: "hubs/05_MEETINGS.md",
   relocation: "hubs/06_RELOCATION.md",
-  barcelona: "hubs/06_RELOCATION.md",
+  cityB: "hubs/06_RELOCATION.md",
   [side-project]: "hubs/07_[side-project].md",
   [pet]: "hubs/08_JAY.md",
   spanish: "hubs/09_SPANISH.md",
@@ -810,10 +810,10 @@ function extractSummary(note: GranolaNoteDetail): string {
 function autoDetectDomain(title: string, summary: string): string {
   const text = `${title} ${summary}`.toLowerCase();
   if (/\b(рся|[employer-ad-network]|эксперимент|баннер|нейродизайн|аукцион|sdk|ssp|cpm|overlay|формат|блок|монетиз|партнёр|дизайн id|автораст|флаг)/i.test(text)) return "[employer-ad-network]";
-  if (/\b(spanish|español|práctica|clase|lección|judit)/i.test(text)) return "spanish";
-  if (/\b([pet]|basenji|vet|renal|epilep|собак)/i.test(text)) return "[pet]";
+  if (/\b(spanish|español|práctica|clase|lección|teacher)/i.test(text)) return "spanish";
+  if (/\b([pet]|breed|vet|renal|epilep|собак)/i.test(text)) return "[pet]";
   if (/\b([side-project]|stripe|restaurant|nfc|qr)/i.test(text)) return "[side-project]";
-  if (/\b(barcelona|bcn|relocation|visa|аренда)/i.test(text)) return "relocation";
+  if (/\b(cityB|bcn|relocation|visa|аренда)/i.test(text)) return "relocation";
   return "general";
 }
 
@@ -1057,7 +1057,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       "",
       "**Active model:** **Fable 5** (`claude-fable-5`, 1M) — returned 2026-07-01 after the 06-12 US-suspension; Opus 4.8 = fallback + classifier-redirect target. Do NOT hard-assume a model from memory — the single canonical home is `read_file({path:'CLAUDE.md'})` § Model landscape (read it if the model matters). Whatever is active: flag uncertainty plainly, prefer a tool call ('дай проверю') over an unsupported claim.",
       "",
-      "**Before any answer about ongoing topics ([employer-ad-network], [pet], Barcelona relocation, [side-project], Spanish, user-site.example, artifacts, plugins, mobile workflows):**",
+      "**Before any answer about ongoing topics ([employer-ad-network], [pet], cityB relocation, [side-project], Spanish, user-site.example, artifacts, plugins, mobile workflows):**",
       "1. Call `get_snapshot` (or `wake_up` prompt) once — STATUS_SNAPSHOT.md + MEMORY_EDITS.md.",
       "2. If on iPhone/iPad/web-mobile: also call `get_hub({domain:'00_mobile_kickoff'})` AND `get_hub({domain:'18_mobile_skills_catalog'})` once. They tell you (a) what to load when, (b) which Mac-only skills have mobile equivalents and the exact prompts to orchestrate them via corp MCP (tracker, wiki, calendar, staff, yql, yt, intrasearch, deepagent, granola).",
       "3. Topic-detect from user's first message → `get_hub` for the matched hub per the routing table in CLAUDE.md (read via `read_file({path:'CLAUDE.md'})` if unsure).",
@@ -1074,11 +1074,11 @@ function createServer(env: Env, ctx?: ExecutionContext) {
       "",
       "**Artifacts (ANY surface, ANY format) — canon v3.1 «одна система, три режима»:** live guide https://a.user-site.example/6ae26ebfe440 + `read_file({path:'skills/html-artifact-master/SKILL.md'})`. HTML: system+Inter only (serif = blog-only), body 18px, text 84ch / page 1080px, bg #FAF9F7 (personal) | #FCFDFF (corp), blue links #1C5FB8, exactly TWO block shapes (neutral rounded container / semantic left-edge tint — никаких цветных верхних кромок), every tracker key = inline link, copy-payloads = plain text (clipboard.writeText, не rich-selection). PPTX/PDF: [employer-ad-network] brand guide + те же принципы. Новый дизайн-паттерн/фидбэк → сначала обнови гайд (тот же hash) + SKILL, потом применяй.",
       "",
-      "**Hub map (route by topic):** 02 personal · 03/04 [employer-ad-network] work · 05 [employer-ad-network] meeting index · 06 Barcelona · 07 [side-project] · 08 [pet] health · 09 Spanish · 10 user-site.example · 11 a.user-site.example artifacts · 12 [employer-ad-network] data infra · 13 corp landscape · 14 corp gaps · 15 TG/Arcadia/SO · 16 prompt library · 17 plugins state (Mac) · 18 mobile skills catalog.",
+      "**Hub map (route by topic):** 02 personal · 03/04 [employer-ad-network] work · 05 [employer-ad-network] meeting index · 06 cityB · 07 [side-project] · 08 [pet] health · 09 Spanish · 10 user-site.example · 11 a.user-site.example artifacts · 12 [employer-ad-network] data infra · 13 corp landscape · 14 corp gaps · 15 TG/Arcadia/SO · 16 prompt library · 17 plugins state (Mac) · 18 mobile skills catalog.",
       "",
       "**Tool gating by topic (cross-surface policy, 2026-05-27):** при старте КАЖДОЙ новой conversation, после `get_snapshot`, классифицируй topic ПЕРВЫМ user message и применяй gate:",
       "1. **Clearly work** ([employer-ad-network] / PCODE-* / BSSERVER-* / [employer] meeting / явный запрос про tracker/wiki/yql/yt) — используй corp tools (tracker_mcp, wiki, intrasearch, yql, yt, devtools, ab_experiments, mail_corp, monium_mcp, staff_api_mcp, docs, deepagent, proai) свободно, без вопроса.",
-      "2. **Personal / Entertainment** ([pet], [side-project], Spanish, Barcelona relocation, user-site.example, фильмы/сериалы/recap, любая non-work тема) — **НЕ трогай corp tools** даже если доступны. Skip tracker/wiki/yql/yt/intrasearch/mail_corp/monium/staff_api. claude-memory tools OK (snapshot, get_hub, read_file, semantic_search, granola_recent, r2_download, update_file, remember) — это shared substrate.",
+      "2. **Personal / Entertainment** ([pet], [side-project], Spanish, cityB relocation, user-site.example, фильмы/сериалы/recap, любая non-work тема) — **НЕ трогай corp tools** даже если доступны. Skip tracker/wiki/yql/yt/intrasearch/mail_corp/monium/staff_api. claude-memory tools OK (snapshot, get_hub, read_file, semantic_search, granola_recent, r2_download, update_file, remember) — это shared substrate.",
       "3. **Ambiguous** (мог бы быть и работа, и личное — например «найди контакт Х», «расскажи про Y») — **СПРОСИ User явно**: «Это про работу или личное? Если работа — могу через tracker/wiki/staff. Если личное — обойдусь claude-memory.» Не угадывай молча.",
       "4. **Corp tool failure** (timeout / no-auth / endpoint down) — НЕ retry молча. Скажи: «corp endpoint <name> недоступен сейчас; альтернатива X, или подождать пока поднимется?». User решит.",
       "   ⚠ **`tracker_mcp` известно нестабилен (2026-06-01):** его `ya`-stdio транспорт виснет (особенно в суб-агентах/workflow, без таймаута). На Code есть REST-обход `scripts/tracker_rest.py` (`$STARTREK_TOKEN`, Startrek API). В Chat локального обхода нет — статусы тикетов бери из committed hubs (03/04/13/14), а свежий live-pull трекера делегируй Code-сессии.",
@@ -1579,7 +1579,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
     "remember",
     "Store a fact using free-text input. Auto-extracts the triple from patterns like 'entity.attr = value', 'attr: value', or 'entity is value'. Falls back to a timestamped note for unstructured input. Cheaper than store_fact when you just want to jot something down.",
     {
-      text: z.string().describe("Free-text fact, e.g. '[pet].diet = renal LP', 'user is in Belgrade until June', 'experiment X shipped Q2'"),
+      text: z.string().describe("Free-text fact, e.g. '[pet].diet = renal LP', 'user is in cityA until June', 'experiment X shipped Q2'"),
       domain: z.string().optional().describe("Domain hint: [pet], [employer-ad-network], [side-project], relocation, spanish, finance, blog"),
     },
     { title: "Save a Fact (auto-detect from text)", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -1630,8 +1630,8 @@ function createServer(env: Env, ctx?: ExecutionContext) {
           /\b([pet]|дог|pet|renal|urinary|vet|epilep)/i.test(trimmed) ? "[pet]" :
           /\b([employer-ad-network]|рся|experiment|эксперимент|автораст|нейро|overlay)/i.test(trimmed) ? "[employer-ad-network]" :
           /\b([side-project]|stripe|twilio|whatsapp|glovo)/i.test(trimmed) ? "[side-project]" :
-          /\b(bcn|barcelona|relocation|visa|eurobelka|аренда)/i.test(trimmed) ? "relocation" :
-          /\b(spanish|español|judit|dele|b1|b2)/i.test(trimmed) ? "spanish" :
+          /\b(bcn|cityB|relocation|visa|eurobelka|аренда)/i.test(trimmed) ? "relocation" :
+          /\b(spanish|español|teacher|dele|b1|b2)/i.test(trimmed) ? "spanish" :
           "general"
         );
 
@@ -2025,7 +2025,7 @@ function createServer(env: Env, ctx?: ExecutionContext) {
     {
       subject: z.string().describe("Entity, e.g. '[pet]', 'user', '[side-project]'"),
       predicate: z.string().describe("Relationship, e.g. 'diet', 'location', 'on_leave'"),
-      object: z.string().describe("Value, e.g. 'Royal Canin Renal', 'Belgrade'"),
+      object: z.string().describe("Value, e.g. 'Royal Canin Renal', 'cityA'"),
       valid_from: z.string().describe("Start date ISO, e.g. '2026-04-01'"),
       valid_until: z.string().optional().describe("End date ISO, or omit for ongoing"),
       source: z.string().optional().describe("Source reference, e.g. 'hub08', 'conversation'"),

@@ -141,6 +141,14 @@ git fetch origin
 git reset --hard origin/main
 ```
 
+### 2026-09-07 — worker source carried a third party's first name, the pet breed and two cities
+
+**What happened.** The synced `config/mcp-worker/src/index.ts` kept four identifiers the sanitizer had no rule for: a private language teacher's first name (inside the topic-routing regexes), the pet's breed (same regexes), and the owner's two residence cities (routing regexes, hub map, example strings). No secret material — but hard rule 1 of this repo's `CLAUDE.md` bans names, pet identifiers and locations outright. Found by the 2026-09-07 self-audit of the private source repo, not by the public lint, because `lint-templates.yml` only knew the owner's own identifiers.
+
+**Remediation (2026-09-07).** Strip rules for the four terms in the private sync script, a refuse-after-sanitization gate for the same terms, three sanitizer test fixtures; `lint-templates.yml` now greps for them too; HEAD rewritten in place with regex-safe placeholders (`teacher` / `breed` / `cityA` / `cityB`). **History is not rewritten** — these are ordinary words, not credentials; a `git filter-repo` pass is the owner's call.
+
+**Takeaway.** Every identifier class named in `CLAUDE.md` rule 1 needs a rule in the sanitizer AND a pattern in the public lint. "No secrets" is not "no personal data".
+
 ## Reporting
 
 If you find a security issue in the Memex blueprint, please open an issue on the [GitHub repo](https://github.com/a-pap/memex/issues) or contact the maintainer directly.
