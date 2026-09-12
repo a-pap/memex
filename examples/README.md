@@ -2,7 +2,7 @@
 
 These are anonymized examples from a real Memex installation that has been running since October 2025 across 4+ domains.
 
-All personal data has been replaced with fictional equivalents. The structure, format, and level of detail are authentic.
+The structure, format and level of detail are authentic; every fact is invented — names, species, conditions, dates and places are not those of any real person or animal (the pet-health demo was re-fictionalised 2026-09-07 after an audit found it too close to a real record).
 
 These hubs show a *lived-in* style — free-form sections that grew over months. The canonical starting skeleton is tighter: **Current Status → Open Gaps → Changelog**, defined in [templates/hubs/01_example_hub.md](../templates/hubs/01_example_hub.md). Start from that template; your hubs drift toward this looser shape as they mature.
 
