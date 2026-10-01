@@ -1,5 +1,7 @@
 # Setup — Full Mode with MCP (15 minutes)
 
+> **Snapshot note.** This page describes the v2.x reference build (see README § Snapshot note, 2026-08-31). The private production system moved to a smaller v3.0 tool set; the mirror stays v2.x by decision.
+
 Full mode adds a **Cloudflare Worker** that serves as an MCP server. Claude.ai connects to it directly via the MCP connector, giving you 26 tools for reading, writing, searching, and monitoring your memory.
 
 > **Do you need this?** Reading your memory in claude.ai is already free via the

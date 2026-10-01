@@ -21,14 +21,19 @@ on:
     branches: [main]
     paths:
       - 'config/mcp-worker/**'
+      - '.github/workflows/deploy-mcp.yml'
   workflow_dispatch:
 
-# Prevent concurrent deploys racing on the same Worker. Newer push cancels
-# in-flight; if multiple PRs squash-merge back-to-back, only the last deploy
-# matters anyway. Added 2026-05-13 as part of CF/GitHub infra optimization.
+# Prevent concurrent deploys racing on the same Worker. Queued runs are
+# coalesced to the newest by GitHub, so back-to-back merges still converge —
+# but an IN-FLIGHT deploy is never cancelled: `cancel-in-progress: true`
+# killed runs 140/141/146 mid-deploy on the nightly dependabot bursts
+# (2026-09-01 / 09-04), and a cancel between `wrangler deploy` and the three
+# `wrangler secret put` calls leaves a half-refreshed secret set until the
+# next push. Same pattern as deploy-spanish-portal.yml (audit WF-04, 2026-09-07).
 concurrency:
   group: deploy-mcp-worker
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -47,7 +52,7 @@ jobs:
       # ~60-80% faster on cache hits (typical: 30s -> 5-8s for our deps).
       # Cache key derived from package-lock.json — invalidates only when
       # deps change.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -92,10 +97,24 @@ jobs:
           # MCP tool to push outbound Telegram from mobile/web (the bot token
           # never leaves Cloudflare). Skipped silently if the secret is unset.
           TELEGRAM_BOT_TOKEN_SECRET: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # Bearer for bare /mcp (portal-gated since 2026-08-12). The Cloudflare
+          # MCP portal sends it via Custom headers; local hooks read the same
+          # value from ~/.mcp_store/mcp_portal_token. Unset → bare /mcp closed.
+          PORTAL_TOKEN_SECRET: ${{ secrets.PORTAL_TOKEN }}
         run: |
-          printf '%s' "$GH_PAT_SECRET" | npx wrangler secret put GITHUB_PAT
+          if [ -n "$GH_PAT_SECRET" ]; then
+            printf '%s' "$GH_PAT_SECRET" | npx wrangler secret put GITHUB_PAT
+          else
+            echo "::error::GH_PAT GitHub secret missing — the worker cannot read or write the memory repo without it."
+            exit 1
+          fi
           if [ -n "$TELEGRAM_BOT_TOKEN_SECRET" ]; then
             printf '%s' "$TELEGRAM_BOT_TOKEN_SECRET" | npx wrangler secret put TELEGRAM_BOT_TOKEN
           else
             echo "TELEGRAM_BOT_TOKEN GitHub secret not set — tg_send will report 'not configured' until it is."
+          fi
+          if [ -n "$PORTAL_TOKEN_SECRET" ]; then
+            printf '%s' "$PORTAL_TOKEN_SECRET" | npx wrangler secret put PORTAL_TOKEN
+          else
+            echo "PORTAL_TOKEN GitHub secret not set — bare /mcp stays fully closed (portal cannot authenticate)."
           fi
