@@ -1,5 +1,7 @@
 # MCP Worker — Cloudflare Worker for Memex
 
+> **Snapshot note.** This page describes the v2.x reference build (see README § Snapshot note, 2026-08-31). The private production system moved to a smaller v3.0 tool set; the mirror stays v2.x by decision.
+
 A Cloudflare Worker that exposes your Git-based memory repo as **26 MCP tools** (v2.3.0). This is the **Full mode** access path — Claude.ai Chat and Mobile can't run `git clone`, so the MCP Worker bridges the gap.
 
 ## Architecture
